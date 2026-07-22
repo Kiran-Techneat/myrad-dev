@@ -1,0 +1,5 @@
+// Injected into every SCSS module via vite.config.ts `additionalData`.
+// Only emit-free helpers belong here (variables, mixins) — never real rules,
+// or they would be duplicated into every file.
+@forward 'variables';
+@forward 'mixins';

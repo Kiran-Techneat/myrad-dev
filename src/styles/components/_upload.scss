@@ -1,0 +1,12 @@
+.uplopt { display: flex; align-items: center; gap: 20px; background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 22px 24px; margin-bottom: 16px; cursor: pointer; width: 100%; text-align: left; font-family: inherit; }
+.uplopt:hover { border-color: var(--accent); }
+.uplopt-ico { width: 62px; height: 62px; border-radius: 17px; background: var(--accent-t); color: var(--accent-d); display: flex; align-items: center; justify-content: center; flex: none; }
+.uplopt-ico .ic { width: 30px; height: 30px; }
+.uplopt-nm { font-weight: 800; font-size: 18px; }
+.uplopt-sub { font-size: 14.5px; color: var(--ink2); margin-top: 4px; line-height: 1.5; }
+.uplopt .chev { color: var(--ink3); flex: none; }
+.dropzone { border: 2.5px dashed var(--line); border-radius: 20px; background: var(--surface); padding: 50px 30px; text-align: center; margin-bottom: 20px; }
+.dropzone-ic { width: 64px; height: 64px; border-radius: 50%; background: var(--accent-t); color: var(--accent-d); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
+.dropzone-ic .ic { width: 32px; height: 32px; }
+.dropzone h4 { font-size: 19px; margin-bottom: 8px; }
+.dropzone p { color: var(--ink2); font-size: 15px; margin-bottom: 20px; }

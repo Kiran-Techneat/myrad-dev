@@ -1,0 +1,11 @@
+// Responsive breakpoints (mirror the original @media widths).
+$bp-sm: 640px;
+$bp-md: 900px;
+$bp-lg: 1024px;
+$bp-xl: 1180px;
+
+// Brand palette also exposed as CSS custom properties in base/_tokens.scss.
+// These SCSS copies are handy for use inside mixins/maps if needed.
+$accent: #345d55;
+$accent-dark: #233e38;
+$rose: #95514d;

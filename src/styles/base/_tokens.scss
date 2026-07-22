@@ -1,0 +1,76 @@
+:root {
+  --paper: #f4f1ea;
+  --surface: #fbf9f4;
+  --card: #ffffff;
+  --ink: #20211c;
+  --ink2: #585750;
+  --ink3: #8c8a7e;
+  --line: #e3dccd;
+  --line2: #efeae0;
+  --accent: #345d55;
+  --accent-d: #233e38;
+  --accent-t: #e1eae5;
+  --link-blue: #2f6fed;
+  --clay: #a96e45;
+  --clay-t: #f1e6db;
+  --amber: #8a6e2e;
+  --gold-t: #f0e8d5;
+  --rose: #95514d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236E6D64' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 40px;
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  font-family: 'Schibsted Grotesk', system-ui, sans-serif;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+#root {
+  height: 100%;
+}
+
+.serif {
+  font-family: 'Newsreader', serif;
+}
+
+.ic {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.14em;
+  flex: none;
+}
+
+.app {
+  width: 100%;
+  height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}

@@ -1,0 +1,22 @@
+.viewer { flex: 1; background: #101512; color: #dfe5df; display: flex; flex-direction: column; }
+.vtop { display: flex; align-items: center; gap: 16px; padding: 20px 30px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.vback { background: rgba(255, 255, 255, 0.1); border: 1.5px solid rgba(255, 255, 255, 0.14); color: #dfe5df; font-family: inherit; font-size: 15px; font-weight: 700; border-radius: 12px; padding: 12px 18px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.vback:hover { background: rgba(255, 255, 255, 0.16); }
+.vtitle { font-weight: 700; font-size: 16px; }
+.vsub { font-size: 13.5px; color: #9aa39c; }
+.vstage { flex: 1; position: relative; background: radial-gradient(ellipse 56% 55% at 50% 46%, #243530, #0b0f0d 78%); display: flex; align-items: center; justify-content: center; }
+.vplaceholder { width: 70%; max-width: 640px; aspect-ratio: 1 / 1; border-radius: 16px; background: repeating-linear-gradient(135deg, #1a2220, #1a2220 14px, #182019 14px, #182019 28px); display: flex; align-items: center; justify-content: center; color: #7f9089; font-family: ui-monospace, monospace; font-size: 14px; text-align: center; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.08); }
+.vctrl { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.vctrl button { width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.14); color: #dfe5df; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.vctrl button:hover { background: rgba(255, 255, 255, 0.18); }
+.vctrl .ic { width: 22px; height: 22px; }
+.vtabs { display: flex; gap: 8px; padding: 14px 20px 0; }
+.vtab { padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); color: #9aa39c; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+.vtab.on { background: rgba(255, 255, 255, 0.14); color: #fff; border-color: rgba(255, 255, 255, 0.24); }
+.vwr-foot { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.vreport { flex: 1; overflow-y: auto; background: #0e1311; padding: 24px 30px; }
+.vreport-row { display: flex; justify-content: space-between; color: #9aa39c; font-size: 13px; font-weight: 700; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.vreport-sec { margin-bottom: 18px; }
+.vreport-sec h5 { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #7f9089; margin-bottom: 6px; }
+.vreport-sec p { font-size: 14px; color: #dfe5df; line-height: 1.6; }
+.vreport-sec.imp p { color: #9fd3c1; font-weight: 600; }
