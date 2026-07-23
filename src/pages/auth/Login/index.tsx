@@ -16,6 +16,7 @@ import { FacebookAuthButton } from '@/components/auth/FacebookAuthButton';
 import styles from '../auth.module.scss';
 
 function SocialAuthRow() {
+
     return (
         <>
             <div className={styles['auth-divider']}>
@@ -23,6 +24,7 @@ function SocialAuthRow() {
             </div>
             <div className={styles['auth-social-row']}>
                 <GoogleAuthButton />
+                
                 <FacebookAuthButton />
             </div>
         </>
