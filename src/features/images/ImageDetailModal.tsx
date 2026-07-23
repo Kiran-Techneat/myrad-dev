@@ -1,9 +1,9 @@
 import type { ChangeEvent } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useDialogStore } from '@/store/dialogStore';
-import { useNavStore } from '@/store/navStore';
-import { useOpenShare } from '@/features/share/useOpenShare';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useOpenShare } from '@/hooks/useOpenShare';
 import { usePatchSelfUpload } from '@/hooks/mutations';
 
 const ALLOWED_EXTS = ['pdf', 'jpg', 'jpeg', 'png'];
@@ -20,7 +20,7 @@ export function ImageDetailModal() {
     markReminderSent,
     showNotice,
   } = useDialogStore();
-  const nav = useNavStore();
+  const nav = useAppNavigate();
   const { openShare } = useOpenShare();
   const patchSelfUpload = usePatchSelfUpload();
 

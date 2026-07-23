@@ -1,14 +1,14 @@
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useAuthStore } from '@/store/authStore';
-import { useNavStore } from '@/store/navStore';
-import { useFormsStore } from '@/store/formsStore';
+import { useAuthStore } from '@/store/auth/authStore';
+import { useFormsStore } from '@/store/dashboard/formsStore';
 import { fmtLong } from '@/utils/format';
 
 export function ProfileScreen() {
   const { people, providers } = useDomainData();
   const signOut = useAuthStore((s) => s.signOut);
-  const nav = useNavStore();
+  const navigate = useNavigate();
   const openAddFamily = useFormsStore((s) => s.openAddFamily);
   const openAddProvider = useFormsStore((s) => s.openAddProvider);
 
@@ -16,7 +16,7 @@ export function ProfileScreen() {
 
   const goLogin = () => {
     signOut();
-    nav.go('home');
+    navigate('/login');
   };
 
   return (

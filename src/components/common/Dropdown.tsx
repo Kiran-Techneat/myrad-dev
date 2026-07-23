@@ -1,5 +1,5 @@
 import { Icon } from './Icon';
-import { useDialogStore } from '@/store/dialogStore';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
 
 export interface DropdownOption {
   value: string;

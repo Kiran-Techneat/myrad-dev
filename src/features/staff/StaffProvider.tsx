@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '@/components/common/Icon';
-import { useNavStore } from '@/store/navStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
 
 const SHARE = {
   by: 'Mary Doe',
@@ -36,7 +36,7 @@ const SHARE = {
 };
 
 export function StaffProvider() {
-  const nav = useNavStore();
+  const nav = useAppNavigate();
   const [expanded, setExpanded] = useState<number | null>(null);
 
   return (

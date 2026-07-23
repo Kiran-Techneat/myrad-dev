@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { StudyIcon } from '@/components/common/StudyIcon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useStaffStore, freshWalkIn } from '@/store/staffStore';
+import { useStaffStore, freshWalkIn } from '@/store/dashboard/staffStore';
 import { useCreatePerson, useCreateSelfUpload } from '@/hooks/mutations';
 import { STUDY_TYPES } from '@/constants/studyTypes';
 import { fmtMDY, todayLabel } from '@/utils/format';

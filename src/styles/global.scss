@@ -1,0 +1,27 @@
+// Global stylesheet entry (replaces the old main.scss).
+// Abstracts (variables/mixins) are auto-injected via vite.config.ts, so only
+// real-output partials are @used here.
+//
+// As screens migrate to co-located *.module.scss files, their entries below are
+// removed and any genuinely shared classes they defined move into globals/_shared.
+
+// Foundation (always global)
+@use 'globals/tokens';
+@use 'globals/buttons';
+@use 'globals/layout';
+@use 'globals/modals';
+@use 'globals/shared';
+
+// Screen partials not yet migrated to CSS Modules.
+@use 'components/notify';
+@use 'components/shared' as shared-screen;
+@use 'components/viewer';
+@use 'components/self-upload';
+@use 'components/wizard';
+@use 'components/staff';
+@use 'components/upload';
+@use 'components/profile';
+@use 'components/billing';
+
+// Responsive overrides last so they win the cascade.
+@use 'globals/responsive';

@@ -1,7 +1,8 @@
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useNavStore } from '@/store/navStore';
-import { useWizardStore } from '@/store/wizardStore';
+import { useNavStore } from '@/store/dashboard/navStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useWizardStore } from '@/store/dashboard/wizardStore';
 import { ageOf, fmtLong } from '@/utils/format';
 
 interface NotifyModel {
@@ -45,6 +46,7 @@ const TrustBadges = () => (
 export function NotifyScreen() {
   const { people, centers, requests } = useDomainData();
   const nav = useNavStore();
+  const { closeNotify } = useAppNavigate();
   const w = useWizardStore();
 
   const sigDate = 'June 30, 2026';
@@ -135,7 +137,7 @@ export function NotifyScreen() {
 
   return (
     <div className="wrap" style={{ maxWidth: 760 }}>
-      <button className="backbtn" onClick={nav.closeNotify}>
+      <button className="backbtn" onClick={closeNotify}>
         <Icon name="chevronLeft" />
         Back
       </button>
@@ -284,7 +286,7 @@ export function NotifyScreen() {
       )}
 
       <div className="af-btns">
-        <button className="btn btn-primary btn-block" onClick={nav.closeNotify}>
+        <button className="btn btn-primary btn-block" onClick={closeNotify}>
           Close
         </button>
       </div>

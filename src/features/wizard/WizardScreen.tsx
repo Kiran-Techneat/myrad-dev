@@ -4,9 +4,9 @@ import { StudyIcon } from '@/components/common/StudyIcon';
 import { Dropdown } from '@/components/common/Dropdown';
 import { SignaturePad } from '@/components/common/SignaturePad';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useNavStore } from '@/store/navStore';
-import { useWizardStore } from '@/store/wizardStore';
-import { useFormsStore } from '@/store/formsStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useWizardStore } from '@/store/dashboard/wizardStore';
+import { useFormsStore } from '@/store/dashboard/formsStore';
 import { useCreateRequest } from '@/hooks/mutations';
 import { STUDY_TYPES, PART_GROUPS, WIZ_STEPS } from '@/constants/studyTypes';
 import { MONTHS, ageOf, fmtLong, fmtMDY, resolveStudyDate, todayIso, todayLabel, yearRange } from '@/utils/format';
@@ -21,7 +21,7 @@ const DATE_MODES: [string, string][] = [
 
 export function WizardScreen() {
   const { people, centers } = useDomainData();
-  const nav = useNavStore();
+  const nav = useAppNavigate();
   const w = useWizardStore();
   const openAddFamily = useFormsStore((s) => s.openAddFamily);
   const openAddCenter = useFormsStore((s) => s.openAddCenter);

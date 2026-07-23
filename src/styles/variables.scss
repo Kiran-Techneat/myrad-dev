@@ -1,0 +1,3 @@
+// Public entry point for design tokens / SCSS variables.
+// Re-exports the abstracts layer so app code can `@use '@/styles/variables' as *`.
+@forward 'abstracts/variables';

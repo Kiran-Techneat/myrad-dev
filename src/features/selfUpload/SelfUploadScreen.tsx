@@ -1,15 +1,15 @@
 import { useRef } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useNavStore } from '@/store/navStore';
-import { useSelfUploadStore } from '@/store/selfUploadStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useSelfUploadStore } from '@/store/dashboard/selfUploadStore';
 import { useCreateSelfUpload } from '@/hooks/mutations';
 import { fmtMDY, todayLabel } from '@/utils/format';
 import type { Study } from '@/types';
 
 export function SelfUploadScreen() {
   const { people } = useDomainData();
-  const go = useNavStore((s) => s.go);
+  const { go } = useAppNavigate();
   const su = useSelfUploadStore();
   const createSelfUpload = useCreateSelfUpload();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

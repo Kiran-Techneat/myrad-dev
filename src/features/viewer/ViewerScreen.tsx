@@ -1,21 +1,25 @@
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useNavStore } from '@/store/navStore';
-import { useDialogStore } from '@/store/dialogStore';
-import { useShareStore } from '@/store/shareStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
+import { useShareStore } from '@/store/dashboard/shareStore';
 
 export function ViewerScreen() {
   const { allStudies } = useDomainData();
-  const nav = useNavStore();
-  const { viewerStudyId, viewerTab } = nav;
+  const { studyId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const nav = useAppNavigate();
   const showNotice = useDialogStore((s) => s.showNotice);
   const openShare = useShareStore((s) => s.openShare);
 
-  const vs = allStudies.find((x) => x.id === viewerStudyId);
+  const vs = studyId != null ? allStudies.find((x) => String(x.id) === studyId) : undefined;
   const hasImages = !vs || vs.hasImages !== false;
   const title = vs ? vs.name : 'CT - Chest';
   const sub = vs ? [vs.place, vs.date].filter(Boolean).join(' · ') : 'City Imaging Center · Jun 12, 2026';
-  const isImages = viewerTab !== 'report';
+  const isImages = searchParams.get('tab') !== 'report';
+  const setTab = (tab: 'images' | 'report') =>
+    setSearchParams(tab === 'report' ? { tab: 'report' } : {}, { replace: true });
 
   const share = () => {
     const study = vs ?? { id: 'viewer-ct-chest', name: 'CT - Chest', patient: 'John Doe', date: 'June 30, 2026', place: 'Metro Radiology', hasImages: true };
@@ -44,11 +48,11 @@ export function ViewerScreen() {
 
       <div className="vtabs">
         {hasImages && (
-          <button className={`vtab ${isImages ? 'on' : ''}`} onClick={() => nav.setViewerTab('images')}>
+          <button className={`vtab ${isImages ? 'on' : ''}`} onClick={() => setTab('images')}>
             Images
           </button>
         )}
-        <button className={`vtab ${!isImages ? 'on' : ''}`} onClick={() => nav.setViewerTab('report')}>
+        <button className={`vtab ${!isImages ? 'on' : ''}`} onClick={() => setTab('report')}>
           Report
         </button>
       </div>

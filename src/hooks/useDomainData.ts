@@ -9,7 +9,7 @@ import {
   useStudies,
 } from './queries';
 import { seedCenters, seedPeople, seedProviders, seedRequests, seedShares, seedStudies } from '@/data/seed';
-import { useNavStore } from '@/store/navStore';
+import { useNavStore } from '@/store/dashboard/navStore';
 import type { Person, Study } from '@/types';
 
 /**

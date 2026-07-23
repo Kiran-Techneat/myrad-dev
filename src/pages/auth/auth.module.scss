@@ -1,0 +1,57 @@
+// Auth-area styles, isolated as a CSS Module. Shared by AuthLayout and the
+// Login / Signup / VerifyOtp pages (and the SignupForm component). Genuinely
+// global classes (field, inp, foot, btn, help-strip, ...) live in styles/globals
+// and are referenced as plain strings via cx().
+
+.loginwrap { flex: 1; display: flex; align-items: stretch; }
+.loginside { width: 46%; flex: none; background: linear-gradient(160deg, #3c665d, #233e38 78%); color: #fff; display: flex; flex-direction: column; justify-content: center; padding: 60px 64px; position: relative; overflow: hidden; }
+.loginside-ic { width: 64px; height: 64px; border-radius: 18px; background: rgba(255, 255, 255, 0.14); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.loginside-ic :global(.ic) { width: 32px; height: 32px; }
+.loginside-lockup { display: flex; align-items: center; gap: 14px; margin-bottom: 34px; }
+.loginside-lockup .loginside-ic { width: 44px; height: 44px; margin-bottom: 0; flex: none; }
+.loginside-lockup .loginside-ic :global(.ic) { width: 22px; height: 22px; }
+.loginside-wordmark { font-size: 22px; font-weight: 700; color: #fff; }
+.loginside h1 { font-size: 34px; line-height: 1.25; max-width: 420px; }
+.loginside p { font-size: 16px; color: #d6e5df; margin-top: 16px; max-width: 400px; line-height: 1.6; }
+.loginside-feats { display: flex; flex-direction: column; gap: 16px; margin-top: 32px; }
+.loginside-feat { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; color: #dceae4; font-weight: 500; max-width: 400px; line-height: 1.4; }
+.loginside-feat :global(.ic) { width: 20px; height: 20px; color: #9fc9bb; flex: none; margin-top: 1px; }
+.loginside-bg { position: absolute; right: -40px; bottom: -40px; color: #fff; opacity: 0.06; transform: rotate(-8deg); }
+.loginside-bg :global(.ic) { width: 220px; height: 220px; }
+.loginform-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; background: var(--paper); }
+.logincard { width: 100%; max-width: 440px; padding: 0; }
+.logincard.wide { max-width: 520px; }
+.lbrand { display: flex; flex-direction: column; gap: 6px; margin-bottom: 30px; }
+.lbrand h1 { font-size: 26px; }
+.lbrand p { color: var(--ink2); font-size: 15px; }
+.signup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pwd-guide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: -10px 0 18px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.pwd-rule { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink3); font-weight: 500; }
+.pwd-rule :global(.ic) { width: 14px; height: 14px; flex: none; color: var(--ink3); }
+.pwd-rule.ok { color: var(--accent-d); }
+.pwd-rule.ok :global(.ic) { color: var(--accent); }
+.seg { display: flex; background: var(--line2); border-radius: 16px; padding: 5px; margin-bottom: 26px; }
+.seg-btn { flex: 1; height: 52px; border: none; background: none; font-family: inherit; font-weight: 700; font-size: 15.5px; color: var(--ink2); border-radius: 12px; cursor: pointer; }
+.seg-btn.on { background: var(--card); color: var(--accent-d); box-shadow: 0 2px 8px rgba(40, 50, 45, 0.1); }
+.otp-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.otp-row input:global(.inp) { text-align: center; font-size: 22px; padding: 0; }
+
+.trust-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+
+// --- Social login layout (buttons themselves live in components/auth) ---
+.auth-divider { display: flex; align-items: center; gap: 14px; margin: 18px 0; color: var(--ink3); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.auth-social-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.auth-social-row > * { min-width: 0; width: 100%; }
+
+// --- Responsive (moved from the global responsive sheet) ---
+@media (max-width: 900px) {
+  .loginwrap { flex-direction: column; overflow-y: auto; }
+  .loginside { width: 100%; padding: 36px; }
+  .loginform-wrap { padding: 28px 24px; }
+}
+@media (max-width: 640px) {
+  .seg-btn { font-size: 14px; padding: 0 8px; }
+  .otp-row { flex-wrap: wrap; }
+  .otp-row input:global(.inp) { width: 44px; flex: none; padding: 0; }
+}

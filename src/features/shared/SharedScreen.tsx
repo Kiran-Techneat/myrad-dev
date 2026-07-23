@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useNavStore } from '@/store/navStore';
-import { useDialogStore } from '@/store/dialogStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
 import { useDeleteShare } from '@/hooks/mutations';
 
 export function SharedScreen() {
   const { shares, patientMatches } = useDomainData();
-  const nav = useNavStore();
+  const nav = useAppNavigate();
   const dialog = useDialogStore();
   const deleteShare = useDeleteShare();
 

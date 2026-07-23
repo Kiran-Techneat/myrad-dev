@@ -1,0 +1,26 @@
+// Request detail screen — isolated styles. Shared vocabulary (wrap, backbtn,
+// sec-hd, study rows, dstudy/dstudy-acts, mini, note-box, chip, btn, cb-*, k/v)
+// lives in styles/globals and is referenced as plain global strings via cx().
+
+.det-hero { background: var(--card); border: 1.5px solid var(--line); border-radius: 20px; padding: 20px 24px; margin-bottom: 20px; }
+.det-hero h2 { font-size: 21px; margin: 0; }
+.det-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.det-hero :global(.cb-addr) { font-size: 13.5px; color: var(--ink2); }
+.det-hero :global(.cb-contacts2) { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
+.det-hero :global(.cb-c) { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink2); font-weight: 600; }
+.det-hero :global(.cb-c) :global(.ic) { width: 15px; height: 15px; color: var(--accent); }
+.det-meta { display: flex; flex-wrap: wrap; gap: 6px 24px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line2); font-size: 13.5px; }
+.det-meta :global(.k) { color: var(--ink2); margin-right: 5px; }
+.det-meta :global(.v) { font-weight: 700; color: var(--ink); }
+
+.dstudy-top { display: flex; align-items: center; gap: 16px; }
+.study-period-box { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink2); background: var(--surface); border: 1px solid var(--line2); border-radius: 20px; padding: 3px 10px 3px 4px; font-weight: 600; white-space: nowrap; margin-left: 10px; vertical-align: middle; }
+.sp-lbl { color: var(--ink3); font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: 0.03em; background: var(--card); border-radius: 20px; padding: 2px 6px; }
+
+.await-sub { font-size: 12.5px; color: var(--ink2); margin: 6px 0 10px; line-height: 1.5; }
+.await-or { display: flex; align-items: center; gap: 10px; margin: 10px 0; color: var(--ink3); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.await-or::before, .await-or::after { content: ''; flex: 1; height: 1px; background: var(--line2); }
+.awaiting { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line2); font-size: 13px; color: var(--amber); font-weight: 600; }
+.det-acts { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+.rep-file { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--accent-d); font-weight: 600; margin-top: 12px; }
+.rep-file :global(.ic) { width: 15px; height: 15px; flex: none; }

@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { StudyIcon } from '@/components/common/StudyIcon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useNavStore } from '@/store/navStore';
-import { useDialogStore } from '@/store/dialogStore';
-import { useOpenShare } from '@/features/share/useOpenShare';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
+import { useOpenShare } from '@/hooks/useOpenShare';
 import type { Study } from '@/types';
 
 export function ImagesScreen() {
   const { allStudies, showingAllPatients, patientMatches } = useDomainData();
-  const nav = useNavStore();
+  const nav = useAppNavigate();
   const openImgDetail = useDialogStore((s) => s.openImgDetail);
   const { shareStudies } = useOpenShare();
 

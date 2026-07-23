@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useDialogStore } from '@/store/dialogStore';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
 
 export function BillingScreen() {
   const showNotice = useDialogStore((s) => s.showNotice);

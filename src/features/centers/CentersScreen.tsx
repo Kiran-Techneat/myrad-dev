@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { useDomainData } from '@/hooks/useDomainData';
-import { useFormsStore } from '@/store/formsStore';
+import { useFormsStore } from '@/store/dashboard/formsStore';
 import type { Center } from '@/types';
 
 function centerHay(c: Center): string {

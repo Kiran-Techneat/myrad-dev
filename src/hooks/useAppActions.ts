@@ -1,13 +1,13 @@
-import { useNavStore } from '@/store/navStore';
-import type { Screen, StaffView } from '@/store/navStore';
-import { useWizardStore } from '@/store/wizardStore';
-import { useSelfUploadStore } from '@/store/selfUploadStore';
-import { useStaffStore } from '@/store/staffStore';
-import { useDialogStore } from '@/store/dialogStore';
+import type { Screen, StaffView } from '@/store/dashboard/navStore';
+import { useAppNavigate } from '@/hooks/useAppNavigate';
+import { useWizardStore } from '@/store/dashboard/wizardStore';
+import { useSelfUploadStore } from '@/store/dashboard/selfUploadStore';
+import { useStaffStore } from '@/store/dashboard/staffStore';
+import { useDialogStore } from '@/store/dashboard/dialogStore';
 
 /** Cross-store navigation actions with the side effects the original `go*` handlers had. */
 export function useAppActions() {
-  const nav = useNavStore();
+  const nav = useAppNavigate();
   const resetWizard = useWizardStore((s) => s.reset);
   const resetSelfUpload = useSelfUploadStore((s) => s.reset);
   const ensureWalkIn = useStaffStore((s) => s.ensureWalkIn);
