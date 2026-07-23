@@ -6,10 +6,8 @@ export function formatUSPhone(raw: string): string {
   if (d.length === 11 && d[0] === '1') d = d.slice(1);
   d = d.slice(0, 10);
   if (!d.length) return '';
-  let out = '+1';
-  out += ' (' + d.slice(0, 3);
-  if (d.length >= 3) out += ')';
-  if (d.length > 3) out += ' ' + d.slice(3, 6);
+  let out = '+1 (' + d.slice(0, 3);
+  if (d.length > 3) out += ') ' + d.slice(3, 6);
   if (d.length > 6) out += '-' + d.slice(6, 10);
   return out;
 }

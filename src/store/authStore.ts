@@ -1,20 +1,7 @@
 import { create } from 'zustand';
+import { isUserAuthenticated } from '@/utils/authUtility';
 
-export interface SignupForm {
-  first: string;
-  last: string;
-  email: string;
-  sex: string;
-  dob: string;
-  phone: string;
-  zip: string;
-  pwd: string;
-  pwd2: string;
-}
-
-const emptySignup: SignupForm = {
-  first: '', last: '', email: '', sex: '', dob: '', phone: '', zip: '', pwd: '', pwd2: '',
-};
+type SignupStep = 'form' | 'otp' | 'done';
 
 interface AuthState {
   loggedIn: boolean;
@@ -22,7 +9,12 @@ interface AuthState {
   otp: boolean;
   authView: 'login' | 'signup';
   signupDone: boolean;
-  signup: SignupForm;
+
+  // Cross-step context for the real auth flows.
+  sessionId: string | null;
+  pendingUsername: string | null;
+  signupStep: SignupStep;
+  otpHint: string | null;
 
   setLoginTab: (tab: 'phone' | 'email') => void;
   goOtp: () => void;
@@ -31,25 +23,38 @@ interface AuthState {
   signOut: () => void;
   goToSignUp: () => void;
   goToSignIn: () => void;
-  patchSignup: (patch: Partial<SignupForm>) => void;
   completeSignup: () => void;
+
+  setSessionId: (id: string | null) => void;
+  setPendingUsername: (username: string | null) => void;
+  setSignupStep: (step: SignupStep) => void;
+  setOtpHint: (hint: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  loggedIn: false,
+  loggedIn: isUserAuthenticated(),
   loginTab: 'phone',
   otp: false,
   authView: 'login',
   signupDone: false,
-  signup: { ...emptySignup },
+
+  sessionId: null,
+  pendingUsername: null,
+  signupStep: 'form',
+  otpHint: null,
 
   setLoginTab: (loginTab) => set({ loginTab }),
   goOtp: () => set({ otp: true }),
-  backToLogin: () => set({ otp: false }),
+  backToLogin: () => set({ otp: false, sessionId: null }),
   signIn: () => set({ loggedIn: true, otp: false }),
-  signOut: () => set({ loggedIn: false, otp: false }),
-  goToSignUp: () => set({ authView: 'signup', signupDone: false }),
-  goToSignIn: () => set({ authView: 'login', signupDone: false }),
-  patchSignup: (patch) => set((s) => ({ signup: { ...s.signup, ...patch } })),
-  completeSignup: () => set({ signupDone: true }),
+  signOut: () => set({ loggedIn: false, otp: false, sessionId: null, pendingUsername: null }),
+  goToSignUp: () => set({ authView: 'signup', signupDone: false, signupStep: 'form' }),
+  goToSignIn: () =>
+    set({ authView: 'login', signupDone: false, signupStep: 'form', sessionId: null }),
+  completeSignup: () => set({ signupDone: true, signupStep: 'done' }),
+
+  setSessionId: (sessionId) => set({ sessionId }),
+  setPendingUsername: (pendingUsername) => set({ pendingUsername }),
+  setSignupStep: (signupStep) => set({ signupStep }),
+  setOtpHint: (otpHint) => set({ otpHint }),
 }));

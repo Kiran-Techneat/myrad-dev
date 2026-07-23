@@ -112,7 +112,7 @@
 .ddrop-btn.open { border-color: var(--accent); background: var(--card); }
 .ddrop-chev { width: 14px; height: 14px; flex: none; color: #6e6d64; transition: transform 0.18s; }
 .ddrop-btn.open .ddrop-chev { transform: rotate(180deg); }
-.ddrop-list { position: relative; z-index: 41; margin-top: 8px; max-height: 242px; overflow-y: auto; background: var(--surface); border: 1.5px solid var(--line); border-radius: 15px; padding: 6px; }
+.ddrop-list { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 41; max-height: 242px; overflow-y: auto; background: var(--surface); border: 1.5px solid var(--line); border-radius: 15px; padding: 6px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12); }
 .ddrop-opt { display: block; width: 100%; text-align: left; padding: 11px 13px; border-radius: 10px; border: none; background: transparent; font-family: inherit; font-size: 15px; color: var(--ink); cursor: pointer; }
 .ddrop-opt.sel { background: var(--accent-t); color: var(--accent-d); font-weight: 600; }
 .date-summary { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13.5px; font-weight: 600; color: var(--accent-d); background: var(--accent-t); border-radius: 11px; padding: 10px 13px; }
