@@ -1,0 +1,179 @@
+// Scan-center upload — app-styled pieces that have no StaffUpload equivalent.
+// Uses the app's CSS variables (--accent, --line, --surface, --card, --ink*) so
+// it matches the rest of the product. Structural classes come from _staff.scss.
+
+.sc-studies { display: flex; flex-direction: column; gap: 12px; }
+
+// The segmented control and dropzone are separated by the "How to upload" bulb,
+// so each needs its own full border/radius (base _staff.scss butts them together).
+.uexpand .umethod-seg { border-radius: 12px; border-bottom: 1.5px solid var(--line); }
+.uexpand .umethod-drop { border-radius: 12px; border: 1.5px solid var(--line); cursor: pointer; }
+.uexpand .umethod-drop.dragover { border-color: var(--accent); background: var(--accent-t); }
+.uexpand .umethod-drop:hover { border-color: var(--accent); }
+
+// "Report uploaded" chip — fixed height, hug content, centered
+.sc-report-chip {
+  height: 45px;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+// Outlined secondary-action buttons (Upload report / Couldn't find this study?)
+.sc-secbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 5px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.sc-secbtn:hover { border-color: var(--accent); color: var(--accent-d); }
+.sc-secbtn .ic { width: 14px; height: 14px; }
+
+// Study card header actions (Upload Report button / status chip)
+.sc-row-actions { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; }
+.sc-row-badge { font-size: 11px; font-weight: 700; color: var(--accent-d); background: var(--accent-t); border-radius: 8px; padding: 4px 10px; white-space: nowrap; }
+
+// Study icon tile (used in place of StudyIcon, which needs a StudyTag)
+.sc-studyico { background: var(--accent-t); color: var(--accent-d); display: flex; align-items: center; justify-content: center; }
+.sc-studyico .ic { width: 18px; height: 18px; }
+
+// Upload area within a study card
+.sc-uparea { margin: 0 14px 14px; }
+
+// Dual dropzones (CD/DVD + PC)
+.sc-dropzones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sc-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 8px; padding: 22px 16px; cursor: pointer;
+  background: var(--surface); border: 1.5px dashed var(--line); border-radius: 12px;
+  transition: border-color .15s, background .15s;
+}
+.sc-dropzone:hover { border-color: var(--accent); background: var(--accent-t); }
+.sc-dropzone.dragover { border-color: var(--accent); background: var(--accent-t); }
+.sc-dropzone.disabled { opacity: .5; pointer-events: none; }
+.sc-dropzone-emoji { font-size: 26px; line-height: 1; }
+.sc-dropzone-title { font-size: 12.5px; font-weight: 700; color: var(--ink2); }
+
+.sc-uphint { font-size: 12px; color: var(--ink2); margin: 12px 2px 0; text-align: center; line-height: 1.5; }
+
+// Direct PACS / DICOMweb instruction box
+.sc-pacs { margin-top: 12px; padding: 12px 14px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+.sc-pacs-title { font-weight: 700; color: var(--ink); margin: 0 0 6px; }
+.sc-pacs-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 8px; word-break: break-all; color: var(--accent-d); margin-top: 6px; }
+
+// Per-file / folder cards
+.sc-filecards { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.sc-filecard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); }
+.sc-filecard-row { display: flex; align-items: center; gap: 10px; }
+.sc-filecard-ic { width: 18px; height: 18px; color: var(--accent); flex: none; }
+.sc-filecard-bd { flex: 1; min-width: 0; }
+.sc-filecard-nm { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-filecard-mt { font-size: 11.5px; color: var(--ink2); margin-top: 2px; display: flex; gap: 8px; align-items: center; }
+.sc-filecard-remove { cursor: pointer; color: var(--ink3); font-size: 17px; line-height: 1; border: none; background: none; padding: 2px 6px; }
+.sc-filecard-remove:hover { color: var(--rose); }
+.sc-status { font-weight: 700; }
+.sc-status.done { color: var(--accent-d); }
+.sc-status.error { color: var(--rose); }
+.sc-status.up { color: var(--accent-d); }
+
+// Thin progress bar
+.sc-prog { height: 4px; border-radius: 2px; background: var(--line2); margin-top: 8px; overflow: hidden; }
+.sc-prog > i { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width .15s linear; }
+.sc-prog.done > i { background: #16a34a; }
+.sc-prog.error > i { background: var(--rose); }
+.sc-prog.completing > i { background: var(--amber); }
+
+// Report (PDF) row
+.sc-report { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 8px; background: var(--surface); }
+.sc-report-ic { width: 18px; height: 18px; color: var(--rose); flex: none; }
+.sc-report-bd { flex: 1; min-width: 0; }
+.sc-report-nm { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-report-mt { font-size: 11.5px; color: var(--ink2); margin-top: 2px; }
+
+// Completed scan block (whole item's images uploaded)
+.sc-scandone { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px; color: var(--accent-d); }
+.sc-scandone .ic { width: 40px; height: 40px; }
+.sc-scandone-text { font-weight: 700; font-size: 14px; }
+
+// Invalid / expired link status card
+.sc-status-wrap { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.sc-status-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 40px 34px; max-width: 460px; text-align: center; box-shadow: 0 30px 70px -20px rgba(0,0,0,.18); }
+.sc-status-logo { height: 40px; margin-bottom: 20px; }
+.sc-status-title { font-size: 20px; font-weight: 700; margin: 0 0 10px; }
+.sc-status-title.err { color: var(--rose); }
+.sc-status-msg { font-size: 14px; color: var(--ink2); line-height: 1.6; margin: 0 0 6px; }
+
+// Info pills (reason / referrer / branch / period)
+.sc-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.sc-pill { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; }
+.sc-pill b { color: var(--ink); font-weight: 700; }
+.sc-pill span { color: var(--ink2); }
+
+// Add-study inline form
+.sc-addstudy { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin: 4px 0 16px; }
+.sc-addstudy .field { margin: 0; min-width: 240px; }
+
+// ── Modal (getsheet) inner pieces ────────────────────────────────────────────
+.sc-mhd { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.sc-mhd-ic { width: 30px; height: 30px; flex: none; }
+.sc-mhd.ok .sc-mhd-ic { color: #16a34a; }
+.sc-mhd.warn .sc-mhd-ic { color: var(--amber); }
+.sc-mhd h3 { margin: 0; }
+.sc-mhd p { margin: 3px 0 0; font-size: 13px; color: var(--ink2); }
+
+.sc-cmp { border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.sc-cmp.ok { background: var(--accent-t); border: 1px solid #bbf7d0; }
+.sc-cmp.neutral { background: var(--surface); border: 1px solid var(--line); }
+.sc-cmp.warn { background: var(--gold-t); border: 1px solid #e7dbbf; }
+.sc-cmp-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink3); margin: 0 0 8px; }
+.sc-cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+.sc-cmp-cell .k { font-size: 11px; color: var(--ink3); display: block; }
+.sc-cmp-cell .v { font-size: 13px; font-weight: 600; color: var(--ink); }
+.sc-cmp-head { display: grid; grid-template-columns: 120px 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.sc-cmp-head span { font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: var(--ink3); }
+.sc-cmp-row { display: grid; grid-template-columns: 120px 1fr 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 12px; }
+.sc-cmp-row .k { color: var(--ink3); }
+.sc-cmp-row .exp { font-weight: 600; color: var(--ink); }
+.sc-cmp-row .found { font-weight: 600; }
+.sc-cmp-row .found.match { color: #16a34a; }
+.sc-cmp-row .found.miss { color: var(--rose); }
+
+.sc-summary { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.sc-summary h5 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink3); margin: 0 0 6px; }
+.sc-summary p { font-size: 13px; color: var(--ink); line-height: 1.5; margin: 0; white-space: pre-wrap; }
+
+.sc-parsing { text-align: center; padding: 10px 0 4px; }
+.sc-parsing .su-spin { margin: 0 auto 16px; width: 40px; height: 40px; }
+.sc-parsing-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+.sc-parsing-sub { font-size: 13px; color: var(--ink2); margin: 0; }
+
+.sc-files-ready { font-size: 13px; color: var(--ink2); margin: 4px 0 0; }
+
+// ── No-token code entry page ─────────────────────────────────────────────────
+.sc-notoken { max-width: 560px; margin: 40px auto; padding: 0 16px; }
+.sc-notoken-card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 34px 30px; box-shadow: 0 30px 70px -20px rgba(0,0,0,.18); text-align: center; }
+.sc-notoken-logo { height: 38px; margin-bottom: 18px; }
+.sc-notoken-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: var(--accent-d); background: var(--accent-t); border-radius: 999px; padding: 6px 14px; margin-bottom: 16px; }
+.sc-notoken-badge .ic { width: 14px; height: 14px; }
+.sc-notoken-sub { font-size: 14px; color: var(--ink2); line-height: 1.6; margin: 6px 0 22px; }
+.sc-otp { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.sc-otp-input { width: 42px !important; height: 52px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 20px; font-weight: 700; text-align: center; color: var(--ink); outline: none; text-transform: uppercase; }
+.sc-otp-input:focus { border-color: var(--accent); background: var(--card); }
+.sc-otp-sep { width: 4px; }
+.sc-notoken-hint { font-size: 12px; color: var(--ink3); margin: 0 0 18px; }
+.sc-notoken-help { text-align: left; border-top: 1px solid var(--line2); padding-top: 18px; margin-top: 6px; }
+.sc-notoken-help-title { font-size: 13px; font-weight: 700; margin: 0 0 10px; }
+.sc-notoken-help-item { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: var(--ink2); line-height: 1.5; margin-bottom: 10px; }
+.sc-notoken-help-item .ic { width: 16px; height: 16px; color: var(--accent); flex: none; margin-top: 2px; }
+.sc-notoken-help-note { font-size: 12px; color: var(--ink3); line-height: 1.5; margin: 4px 0 0; }

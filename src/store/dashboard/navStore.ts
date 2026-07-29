@@ -13,14 +13,29 @@ export type Screen =
   | 'upload'
   | 'centers'
   | 'notify'
-  | 'selfUpload'
-  | 'staff';
+  | 'selfUpload';
 
-export type StaffView = 'upload' | 'walkin' | 'provider';
 export type ActivePatient = 'all' | number | string;
 
 export type NotifyKind = 'request' | 'wizardRequest' | 'share' | null;
 export type NotifyShareData = { provider: string; person: string; study: string; date: string } | null;
+
+/**
+ * Real request payload passed from the request-detail page to the Notify preview
+ * via react-router navigate state. When absent on `/notify` (direct access /
+ * refresh), the preview renders a Page Not Found instead of mock data.
+ */
+export interface NotifyRequestData {
+  center: string;
+  patient: string;
+  phone: string;
+  sex: string;
+  age: string;
+  mrn: string;
+  note: string;
+  ref: string;
+  studies: { name: string; statusTxt: string }[];
+}
 
 /**
  * UI state that is NOT part of the URL: open menus, the selected patient, and the

@@ -1,9 +1,16 @@
+import { useLocation } from 'react-router-dom';
 import { Icon } from '@/components/common/Icon';
+import { NotFound } from '@/components/common/NotFound';
 import { useDomainData } from '@/hooks/useDomainData';
 import { useNavStore } from '@/store/dashboard/navStore';
+import type { NotifyRequestData } from '@/store/dashboard/navStore';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useWizardStore } from '@/store/dashboard/wizardStore';
-import { ageOf, fmtLong } from '@/utils/format';
+import { useAppSelector } from '@/store/hook';
+import { ageOf, fmtLong, fmtMDY, formatUSPhone } from '@/utils/format';
+
+/** Profile stores ISO dates; ageOf/fmtLong expect MM/DD/YYYY. */
+const toMDY = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? fmtMDY(v) : v ?? '');
 
 interface NotifyModel {
   headline: string;
@@ -44,19 +51,50 @@ const TrustBadges = () => (
 );
 
 export function NotifyScreen() {
-  const { people, centers, requests } = useDomainData();
+  const { people } = useDomainData();
   const nav = useNavStore();
   const { closeNotify } = useAppNavigate();
   const w = useWizardStore();
+  const userProfile = useAppSelector((s) => s.user.userProfile);
+  const allImageCenterList = useAppSelector((s) => s.request.allImageCenterList);
+
+  // Real request payload passed from the request-detail page via navigate state.
+  const location = useLocation();
+  const reqData = (location.state as { data?: NotifyRequestData } | null)?.data;
 
   const sigDate = 'June 30, 2026';
   const isEmail = nav.notifyChannel === 'email';
 
+  // The request preview requires real data passed via navigate state. Opening
+  // `/notify` directly (no state, and the nav store reset `notifyKind` to null on
+  // reload) has nothing to show — render a Page Not Found instead of mock data.
+  if (nav.notifyKind !== 'wizardRequest' && nav.notifyKind !== 'share' && !reqData) {
+    return <NotFound />;
+  }
+
   let m: NotifyModel;
 
   if (nav.notifyKind === 'wizardRequest') {
-    const person = people.find((p) => p.id === w.personId) ?? ({} as (typeof people)[number]);
-    const center = centers.find((c) => c.id === w.centerId) ?? ({} as (typeof centers)[number]);
+    // Selected patient (self or family member) from the logged-in profile.
+    const selfId = userProfile?.selfPatientId ?? 'self';
+    const fam = userProfile?.familyMembers?.find((fm) => fm.memberId === w.personId);
+    const person =
+      userProfile && (w.personId === selfId || w.personId === userProfile.selfPatientId)
+        ? {
+            name: `${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}`.trim(),
+            dob: toMDY(userProfile.dateOfBirth),
+            sex: userProfile.gender ?? '',
+          }
+        : fam
+          ? { name: `${fam.firstName ?? ''} ${fam.lastName ?? ''}`.trim(), dob: toMDY(fam.dateOfBirth), sex: fam.gender ?? '' }
+          : { name: '', dob: '', sex: '' };
+    // Selected imaging center from the redux search results.
+    const sr = allImageCenterList?.searchResult;
+    const cen = [...(sr?.userCenters ?? []), ...(sr?.masterCenters ?? [])].find((c) => c.id === w.centerId);
+    const center = {
+      name: cen?.name ?? '',
+      phone: cen?.phoneNumber ? formatUSPhone(cen.phoneNumber) : '',
+    };
     const age = ageOf(person.dob ?? '');
     m = {
       headline: 'What the center receives',
@@ -107,31 +145,28 @@ export function NotifyScreen() {
       studies: [{ name: sd.study, statusTxt: 'Shared' }],
     };
   } else {
-    const selReq = requests.find((r) => r.id === nav.selectedReqId) ?? requests[1];
-    const person = people.find((p) => p.name === selReq.patient) ?? ({} as (typeof people)[number]);
-    const age = ageOf(person.dob ?? '');
+    // Real request passed from the detail page via navigate state (guaranteed
+    // present here — the guard above returns a Page Not Found otherwise).
+    const d = reqData!;
     m = {
       headline: 'What the center receives',
-      subhead: `This is exactly what ${selReq.center} receives by email or fax — with the full patient and study details.`,
-      to: selReq.center,
-      phone: '+1 (248) 737-6695',
-      subject: `Imaging request for ${selReq.patient} — action required`,
-      reSubject: `Imaging request for ${selReq.patient}`,
-      greeting: `Dear ${selReq.center} team,`,
+      subhead: `This is exactly what ${d.center} receives by email or fax — with the full patient and study details.`,
+      to: d.center,
+      phone: d.phone,
+      subject: `Imaging request for ${d.patient} — action required`,
+      reSubject: `Imaging request for ${d.patient}`,
+      greeting: `Dear ${d.center} team,`,
       body: 'Your patient has authorized the secure release of their imaging through MyRad Images. Please verify the patient below, then upload the requested studies and the signed radiology report using the secure link.',
-      patient: selReq.patient,
-      dob: fmtLong(person.dob ?? '') || '—',
-      sex: person.sex || '—',
-      age: age != null ? `${age} yrs` : '—',
-      mrn: selReq.mrn || '',
-      note: selReq.note || '',
-      ref: selReq.id,
-      refShort: String(selReq.id).replace(/^REQ-/, ''),
+      patient: d.patient,
+      dob: '—',
+      sex: d.sex || '—',
+      age: d.age || '—',
+      mrn: d.mrn || '',
+      note: d.note || '',
+      ref: d.ref,
+      refShort: String(d.ref).replace(/^REQ-/, ''),
       ctaLabel: 'Open secure upload link',
-      studies: selReq.items.map((it) => ({
-        name: it.label,
-        statusTxt: `Period requested: ${it.dateLabel || selReq.date}`,
-      })),
+      studies: d.studies,
     };
   }
 
@@ -217,6 +252,13 @@ export function NotifyScreen() {
             <div className="mail-note">Tip: open this on the computer that holds the CD/DVD or the study folder.</div>
             <div className="sig-block2">
               <div className="sb-lbl">Patient Authorization</div>
+              {nav.notifyKind === 'wizardRequest' && w.signatureUrl && (
+                <img
+                  src={w.signatureUrl}
+                  alt="Patient signature"
+                  style={{ maxHeight: 64, objectFit: 'contain', display: 'block' }}
+                />
+              )}
               <div className="sig-auth-txt">{m.patient}</div>
               <div className="sb-meta">Signed {sigDate} · Authorized via MyRad Images Secure Platform</div>
             </div>
@@ -274,6 +316,13 @@ export function NotifyScreen() {
           </a>
           <div className="sig-block2">
             <div className="sb-lbl">Patient Authorization</div>
+            {nav.notifyKind === 'wizardRequest' && w.signatureUrl && (
+              <img
+                src={w.signatureUrl}
+                alt="Patient signature"
+                style={{ maxHeight: 64, objectFit: 'contain', display: 'block' }}
+              />
+            )}
             <div className="sig-auth-txt">{m.patient}</div>
             <div className="sb-meta">Signed {sigDate} · Authorized via MyRad Images</div>
           </div>

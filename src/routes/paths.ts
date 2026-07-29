@@ -1,4 +1,4 @@
-import type { Screen, StaffView } from '@/store/dashboard/navStore';
+import type { Screen } from '@/store/dashboard/navStore';
 
 /**
  * Single source of truth mapping the legacy `Screen` union to a URL path.
@@ -18,7 +18,6 @@ export const SCREEN_PATH: Record<Screen, string> = {
   centers: '/centers',
   notify: '/notify',
   selfUpload: '/self-upload',
-  staff: '/staff',
 };
 
 /** Derive the active top-level screen from the current pathname (for nav highlighting). */
@@ -27,7 +26,6 @@ export function screenFromPath(pathname: string): Screen {
   if (pathname.startsWith('/requests')) return 'requests';
   if (pathname.startsWith('/shared')) return 'shared';
   if (pathname.startsWith('/self-upload')) return 'selfUpload';
-  if (pathname.startsWith('/staff')) return 'staff';
   if (pathname.startsWith('/profile')) return 'profile';
   if (pathname.startsWith('/billing')) return 'billing';
   if (pathname.startsWith('/centers')) return 'centers';
@@ -36,11 +34,4 @@ export function screenFromPath(pathname: string): Screen {
   if (pathname.startsWith('/wizard')) return 'wizard';
   if (pathname.startsWith('/upload')) return 'upload';
   return 'home';
-}
-
-/** Derive the active staff sub-view from the current pathname. */
-export function staffViewFromPath(pathname: string): StaffView {
-  if (pathname.startsWith('/staff/walkin')) return 'walkin';
-  if (pathname.startsWith('/staff/provider')) return 'provider';
-  return 'upload';
 }

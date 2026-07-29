@@ -1,24 +1,30 @@
 import type { ChangeEvent } from 'react';
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { Icon } from '@/components/common/Icon';
 import { StudyIcon } from '@/components/common/StudyIcon';
-import { useDomainData } from '@/hooks/useDomainData';
 import { useNavStore } from '@/store/dashboard/navStore';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useDialogStore } from '@/store/dashboard/dialogStore';
 import { useShareStore } from '@/store/dashboard/shareStore';
 import { useUpdateRequestItems } from '@/hooks/mutations';
+import { useAppDispatch, useAppSelector } from '@/store/hook';
+import { downloadFaxPdf, requestReminder, requestViewId } from '@/redux/request/action';
+import { mapRequestViewToRequest } from '@/features/requests/mapScanLink';
+import { showAlert } from '@/components/common/showAlert';
+import { downloadReport } from '@/utils/commonUtils';
 import { statusMeta } from '@/utils/status';
-import type { ImagingRequest, RequestItem } from '@/types';
+import type { RequestItem } from '@/types';
 import styles from './requestDetail.module.scss';
 
 const ALLOWED_EXTS = ['pdf', 'jpg', 'jpeg', 'png'];
 
 export function RequestDetailScreen() {
-  const { requests, centers } = useDomainData();
   const { id } = useParams();
   const nav = useAppNavigate();
+  const dispatch = useAppDispatch();
+  const details = useAppSelector((s) => s.request.requestDetails);
   const setSelectedReqId = useNavStore((s) => s.setSelectedReqId);
   const dialog = useDialogStore();
   const openShare = useShareStore((s) => s.openShare);
@@ -30,13 +36,86 @@ export function RequestDetailScreen() {
     setSelectedReqId(id ?? null);
   }, [id, setSelectedReqId]);
 
-  const selReq: ImagingRequest = requests.find((r) => r.id === id) ?? requests[1];
+  // Fetch the real request whenever the URL id changes (covers deep links / refresh).
+  // When there's no request to show (missing id or a failed fetch), fall back to the
+  // requests list instead of hanging on the "Loading request…" state.
+  useEffect(() => {
+    if (!id) {
+      nav.go('requests');
+      return;
+    }
+    dispatch(requestViewId({ id }))
+      .unwrap()
+      .catch((error: any) => {
+        showAlert({
+          message: error?.headers?.message || 'Failed to load request',
+          status: 'error',
+          autoClose: 6000,
+        });
+        nav.go('requests');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, dispatch]);
+
+  const { mutate: sendReminder, isPending: isRemindPending } = useMutation({
+    mutationFn: () => dispatch(requestReminder({ id: details!.id })).unwrap(),
+    onSuccess: () => {
+      showAlert({ message: 'Reminder email sent successfully', status: 'success', autoClose: 6000 });
+      if (id) dispatch(requestViewId({ id }));
+    },
+    onError: (error: any) => {
+      showAlert({ message: error?.headers?.message || 'Failed to send reminder', status: 'error', autoClose: 6000 });
+    },
+  });
+
+  const { mutate: getFaxPdf, isPending: isDownloading } = useMutation({
+    mutationFn: () => dispatch(downloadFaxPdf({ token: details!.token })).unwrap(),
+    onSuccess: (blob: Blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'fax-instruction-sheet.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    },
+    onError: () => {
+      showAlert({ message: 'Failed to download fax instruction', status: 'error', autoClose: 6000 });
+    },
+  });
+
+  const copyLink = () => {
+    if (!details?.linkUrl) return;
+    navigator.clipboard
+      .writeText(details.linkUrl)
+      .then(() => showAlert({ message: 'Link copied to clipboard', status: 'success', autoClose: 3000 }))
+      .catch(() => showAlert({ message: 'Failed to copy link', status: 'error', autoClose: 3000 }));
+  };
+
+  // Wait for the fetch to resolve. The slice resets requestDetails to null on each
+  // pending fetch, so this shows a fresh load per navigation without stale data.
+  if (!details) {
+    return (
+      <div className="wrap">
+        <button className="backbtn" onClick={() => nav.go('requests')}>
+          <Icon name="chevronLeft" />
+          Back to requests
+        </button>
+        <div className={styles.awaiting} style={{ marginTop: 24 }}>
+          <Icon name="clock" sw={1.8} />
+          Loading request…
+        </div>
+      </div>
+    );
+  }
+
+  const selReq = mapRequestViewToRequest(details);
   const meta = statusMeta(selReq.status);
-  const center = centers.find((c) => c.name === selReq.center);
-  const centerAddr = selReq.centerAddr || center?.address || '';
-  const centerPhone = selReq.centerPhone || center?.phone || '';
-  const centerEmail = selReq.centerEmail || center?.email || '';
-  const centerFax = selReq.centerFax || center?.fax || '';
+  const centerAddr = selReq.centerAddr || '';
+  const centerPhone = selReq.centerPhone || '';
+  const centerEmail = selReq.centerEmail || '';
+  const canFax = selReq.status === 'pending' || selReq.status === 'partial';
 
   const setItems = (items: RequestItem[]) => updateItems.mutate({ id: selReq.id, items });
 
@@ -54,6 +133,22 @@ export function RequestDetailScreen() {
   };
 
   const canShare = selReq.items.some((it) => it.status === 'ready');
+
+  // Real request payload the Notify preview renders (passed via navigate state).
+  const notifyData = {
+    center: selReq.center,
+    patient: selReq.patient,
+    phone: centerPhone,
+    sex: details.gender || '—',
+    age: details.age != null ? `${details.age} yrs` : '—',
+    mrn: selReq.mrn || '',
+    note: details.description || '',
+    ref: details.requestId || selReq.id,
+    studies: selReq.items.map((it) => ({
+      name: it.label,
+      statusTxt: `Period requested: ${it.dateLabel || selReq.date}`,
+    })),
+  };
   const canCancel = selReq.items.some((it) => it.status === 'pending');
   const pendingCount = selReq.items.filter((it) => it.status === 'pending').length;
   const allPending = pendingCount === selReq.items.length;
@@ -99,12 +194,6 @@ export function RequestDetailScreen() {
             <span className="cb-c">
               <Icon name="mail" sw={1.8} />
               {centerEmail}
-            </span>
-          )}
-          {centerFax && (
-            <span className="cb-c">
-              <Icon name="fax" sw={1.8} />
-              {centerFax}
             </span>
           )}
         </div>
@@ -161,14 +250,72 @@ export function RequestDetailScreen() {
 
             {!cancelled && ready && (
               <div className="dstudy-acts">
-                <button className="mini prim" onClick={() => nav.openViewer({ from: 'requestDetail' })}>
+                <button
+                  className="mini prim"
+                  onClick={() =>
+                    nav.openImageViewer({
+                      id: it.scanItemId ?? selReq.id,
+                      tag: it.tag,
+                      name: it.label,
+                      place: selReq.center,
+                      date: it.dateLabel ?? selReq.date,
+                      status: it.status,
+                      reportStatus: it.reportUrl ? 'ready' : 'pending',
+                      patient: selReq.patient,
+                      linkId: it.linkId,
+                      scanItemId: it.scanItemId,
+                      uploadSource: it.uploadSource,
+                      reportUrl: it.reportUrl,
+                    })
+                  }
+                >
                   <Icon name="eye" />
                   View images
                 </button>
-                <button className="mini">
-                  <Icon name="clipboard" />
-                  Report
-                </button>
+                <div className="ddrop" style={{ flex: 1 }}>
+                  <button
+                    className="mini"
+                    style={{ width: '100%' }}
+                    disabled={!it.reportUrl}
+                    onClick={() => dialog.toggleDropdown(`report-menu-${key}`)}
+                  >
+                    <Icon name="clipboard" />
+                    Report
+                    <Icon name="chevronDown" className="ddrop-chev" />
+                  </button>
+                  {dialog.openDropdown === `report-menu-${key}` && it.reportUrl && (
+                    <>
+                      <div className="dropdown-scrim" onClick={dialog.closeDropdown} />
+                      <div className="ddrop-list" style={{ right: 'auto', minWidth: 180 }}>
+                        <button
+                          className="ddrop-opt"
+                          onClick={() => {
+                            dialog.openReportModal(it.reportUrl!);
+                            dialog.closeDropdown();
+                          }}
+                        >
+                          View report
+                        </button>
+                        <button
+                          className="ddrop-opt"
+                          onClick={async () => {
+                            dialog.closeDropdown();
+                            const ok = await downloadReport(it.reportUrl!);
+                            if (ok) {
+                              showAlert({
+                                message: 'Report downloaded successfully',
+                                status: 'success',
+                                autoClose: 6000,
+                              });
+                            }
+                          }}
+                        >
+                          Download report
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -193,15 +340,11 @@ export function RequestDetailScreen() {
                   <button
                     className="mini prim"
                     style={{ flex: '1 1 100%' }}
-                    onClick={() =>
-                      dialog.showNotice(
-                        'Reminder sent',
-                        `${selReq.center} has been notified and will follow up on the images and report for this request.`,
-                      )
-                    }
+                    disabled={isRemindPending}
+                    onClick={() => sendReminder()}
                   >
                     <Icon name="send" sw={1.8} />
-                    Remind the center — images &amp; report
+                    {isRemindPending ? 'Sending reminder…' : 'Remind the center — images & report'}
                   </button>
                 </div>
                 {it.status === 'pending' && (
@@ -278,9 +421,21 @@ export function RequestDetailScreen() {
             Share with Healthcare Provider, Family or Friend
           </button>
         )}
+        {details.linkUrl && (
+          <button className="btn btn-ghost" onClick={copyLink}>
+            <Icon name="link" sw={1.8} />
+            Copy request link
+          </button>
+        )}
+        {canFax && (
+          <button className="btn btn-ghost" disabled={isDownloading} onClick={() => getFaxPdf()}>
+            <Icon name="download" sw={1.8} />
+            {isDownloading ? 'Preparing fax…' : 'Download fax instruction'}
+          </button>
+        )}
         <button
           className="btn btn-ghost"
-          onClick={() => nav.openNotify({ kind: 'request', from: 'requestDetail' })}
+          onClick={() => nav.openNotify({ kind: 'request', requestData: notifyData })}
         >
           <Icon name="mail" sw={1.8} />
           See what the center receives

@@ -24,6 +24,16 @@ export function fmtMDY(iso: string): string {
   return m[2] + '/' + m[3] + '/' + m[1];
 }
 
+/** DICOM study date (YYYYMMDD) -> 'MMM D, YYYY'. Returns '' when not parseable. */
+export function fmtStudyDate(yyyymmdd?: string | null): string {
+  if (!yyyymmdd) return '';
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(String(yyyymmdd).trim());
+  if (!m) return '';
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 /** Long human date from MM/DD/YYYY, ISO, or arbitrary date string. */
 export function fmtLong(v: string): string {
   if (!v) return v;

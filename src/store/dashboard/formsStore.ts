@@ -8,6 +8,10 @@ export interface FamilyForm {
   relOther: string;
   dob: string;
   sex: string;
+  email: string;
+  phone: string;
+  /** Set when editing an existing family member (from the profile API). */
+  memberId: string | null;
 }
 
 export interface CenterForm {
@@ -39,6 +43,7 @@ interface FormsState {
   apForm: ProviderForm;
 
   openAddFamily: (ctx: FormContext) => void;
+  openEditFamily: (member: Partial<FamilyForm>, ctx?: FormContext) => void;
   closeAddFamily: () => void;
   patchFamily: (patch: Partial<FamilyForm>) => void;
   resetFamily: () => void;
@@ -54,7 +59,7 @@ interface FormsState {
   resetProvider: () => void;
 }
 
-const emptyFamily: FamilyForm = { first: '', last: '', rel: '', relOther: '', dob: '', sex: '' };
+const emptyFamily: FamilyForm = { first: '', last: '', rel: '', relOther: '', dob: '', sex: '', email: '', phone: '', memberId: null };
 const emptyCenter: CenterForm = { name: '', addr: '', phone: '', email: '', fax: '' };
 const emptyProvider: ProviderForm = { name: '', email: '', phone: '', fax: '', spec: '' };
 
@@ -68,7 +73,9 @@ export const useFormsStore = create<FormsState>((set) => ({
   addProviderOpen: false,
   apForm: { ...emptyProvider },
 
-  openAddFamily: (ctx) => set({ addFamilyOpen: true, addFamilyCtx: ctx }),
+  openAddFamily: (ctx) => set({ addFamilyOpen: true, addFamilyCtx: ctx, afForm: { ...emptyFamily } }),
+  openEditFamily: (member, ctx = 'profile') =>
+    set({ addFamilyOpen: true, addFamilyCtx: ctx, afForm: { ...emptyFamily, ...member } }),
   closeAddFamily: () => set({ addFamilyOpen: false }),
   patchFamily: (patch) => set((s) => ({ afForm: { ...s.afForm, ...patch } })),
   resetFamily: () => set({ afForm: { ...emptyFamily } }),

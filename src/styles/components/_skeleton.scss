@@ -1,0 +1,27 @@
+// Shimmer placeholder used by the <Skeleton> component while data loads.
+
+.skel {
+  display: inline-block;
+  vertical-align: middle;
+  background: linear-gradient(
+    100deg,
+    var(--line) 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    var(--line) 70%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.3s ease-in-out infinite;
+}
+
+.skel-block {
+  display: block;
+}
+
+@keyframes skel-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

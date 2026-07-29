@@ -22,6 +22,7 @@
 @use 'components/upload';
 @use 'components/profile';
 @use 'components/billing';
+@use 'components/skeleton';
 
 // Responsive overrides last so they win the cascade.
 @use 'globals/responsive';

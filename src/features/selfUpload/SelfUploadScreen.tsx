@@ -1,18 +1,64 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Icon } from '@/components/common/Icon';
-import { useDomainData } from '@/hooks/useDomainData';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useSelfUploadStore } from '@/store/dashboard/selfUploadStore';
 import { useCreateSelfUpload } from '@/hooks/mutations';
+import { useAppDispatch, useAppSelector } from '@/store/hook';
+import { getmyfiles } from '@/redux/myfiles/action';
+import { useSelfUpload } from './useSelfUpload';
+import { ReportExtractModal } from './ReportExtractModal';
+import { ResumeUploadModal } from './ResumeUploadModal';
+import { showAlert } from '@/components/common/showAlert';
 import { fmtMDY, todayLabel } from '@/utils/format';
 import type { Study } from '@/types';
 
+const initialsOf = (f?: string, l?: string) => `${f?.[0] ?? ''}${l?.[0] ?? ''}`.toUpperCase() || 'U';
+const toMDY = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? fmtMDY(v) : v ?? '');
+
 export function SelfUploadScreen() {
-  const { people } = useDomainData();
+  const userProfile = useAppSelector((s) => s.user.userProfile);
   const { go } = useAppNavigate();
   const su = useSelfUploadStore();
   const createSelfUpload = useCreateSelfUpload();
+  const dispatch = useAppDispatch();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const reportInputRef = useRef<HTMLInputElement>(null);
+
+  // Real upload orchestration (zip multipart, report extract, pause/resume).
+  const upload = useSelfUpload({
+    onDone: () => {
+      dispatch(getmyfiles({ searchString: '', page: 1, size: 100 }));
+      su.patch({ uploading: false, done: true, files: [] });
+    },
+  });
+  // The wizard shows its "Uploading…" card whenever a real upload is in flight
+  // (busy) or the mock link save is running (su.uploading).
+  const uploading = su.uploading || upload.busy;
+
+  // Real "who is this for?" list: signed-in user first, then their family members.
+  const people = useMemo(() => {
+    if (!userProfile) return [];
+    const self = {
+      id: userProfile.selfPatientId ?? 'self',
+      name: `${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}`.trim(),
+      initials: initialsOf(userProfile.firstName, userProfile.lastName),
+      sex: userProfile.gender ?? '',
+      dob: toMDY(userProfile.dateOfBirth),
+      isSelf: true,
+      role: 'You',
+    };
+    const family = (userProfile.familyMembers ?? []).map((m) => ({
+      id: m.memberId,
+      name: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim(),
+      initials: initialsOf(m.firstName, m.lastName),
+      sex: m.gender ?? '',
+      dob: toMDY(m.dateOfBirth),
+      isSelf: false,
+      role: m.relationship ?? '',
+    }));
+    return [self, ...family];
+  }, [userProfile]);
 
   const selP = people.find((p) => p.id === su.selPerson);
   const wantImages = su.uploadType === 'images';
@@ -25,37 +71,106 @@ export function SelfUploadScreen() {
   const step1Disabled = !su.selPerson || su.desc.trim().length <= 2;
   const linkReady = su.linkUrl.trim().length > 4;
 
-  const startUpload = () => {
+  // A saved PACS/report link has no real upload endpoint — keep the local (mock) save.
+  const saveLinkLocally = () => {
     su.patch({ uploading: true });
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(
-      () => {
-        const dateLabel = su.when.trim() || todayLabel();
-        const newStudy: Study = {
-          id: `su-${Date.now()}`,
-          tag: 'OTH',
-          name: su.desc.trim() || 'Uploaded study',
-          place: 'Self-uploaded',
-          date: dateLabel,
-          status: 'ready',
-          reportStatus: wantReport ? 'ready' : 'pending',
-          patient: selP ? selP.name : '',
-          selfUploaded: true,
-          hasImages: !wantReport,
-          selfNotes: (wantReport ? su.reportNotes : su.notes) || '',
-          selfKind: contentsLabel,
-        };
-        createSelfUpload.mutate(newStudy);
-        su.patch({ uploading: false, done: true });
-      },
-      isLink ? 900 : 2200,
-    );
+    timer.current = setTimeout(() => {
+      const dateLabel = su.when.trim() || todayLabel();
+      const newStudy: Study = {
+        id: `su-${Date.now()}`,
+        tag: 'OTH',
+        name: su.desc.trim() || 'Uploaded study',
+        place: 'Self-uploaded',
+        date: dateLabel,
+        status: 'ready',
+        reportStatus: wantReport ? 'ready' : 'pending',
+        patient: selP ? selP.name : '',
+        selfUploaded: true,
+        hasImages: !wantReport,
+        selfNotes: (wantReport ? su.reportNotes : su.notes) || '',
+        selfKind: contentsLabel,
+      };
+      createSelfUpload.mutate(newStudy);
+      su.patch({ uploading: false, done: true });
+    }, 900);
+  };
+
+  // Real upload of the captured files through the files-service.
+  const startRealUpload = (files: File[]) => {
+    if (!files.length) return;
+    if (!selP) {
+      showAlert({ message: 'Please choose who this is for.', status: 'error', autoClose: 6000 });
+      return;
+    }
+    su.patch({ files });
+    const meta = {
+      patientId: String(selP.id),
+      fullName: selP.name,
+      description: su.desc.trim() || 'Uploaded study',
+      scanType: 'OTHER', // wizard doesn't capture modality; backend may refine
+      bodyPart: '',
+    };
+    // Report → extract-preview modal then commit; DICOM → zip multipart upload.
+    if (wantReport) {
+      upload.startReportUpload(meta, files);
+    } else {
+      upload.startDicomUpload(meta, files);
+    }
+  };
+
+  // Route the primary "Select…/Save" button to the right action.
+  const startUpload = () => {
+    if (isLink) {
+      saveLinkLocally();
+    } else if (wantReport) {
+      reportInputRef.current?.click();
+    } else {
+      folderInputRef.current?.click();
+    }
+  };
+
+  const onFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (files.length) startRealUpload(files);
+  };
+
+  const onReportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) startRealUpload([file]);
   };
 
   return (
     <div className="su-wrap">
       <div className="su-page">
-        {!su.done && !su.uploading && (
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          {...({ webkitdirectory: '', directory: '' } as any)}
+          style={{ display: 'none' }}
+          onChange={onFolderChange}
+        />
+        <input
+          ref={reportInputRef}
+          type="file"
+          accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
+          style={{ display: 'none' }}
+          onChange={onReportChange}
+        />
+
+        <ReportExtractModal
+          open={!!upload.reportUploadExtractResponse}
+          data={upload.reportUploadExtractResponse?.[0] ?? null}
+          loading={upload.reportUploading}
+          onUpload={upload.confirmReport}
+          onCancel={upload.cancelExtract}
+        />
+        <ResumeUploadModal open={upload.resumeModalOpen} onResume={upload.resume} onStartNew={upload.startNew} />
+
+        {!su.done && !uploading && (
           <>
             <button className="backbtn" onClick={() => go('home')}>
               <Icon name="chevronLeft" />
@@ -111,7 +226,7 @@ export function SelfUploadScreen() {
           </div>
         )}
 
-        {su.uploading && (
+        {uploading && (
           <div className="su-card">
             <h2 className="serif">Uploading…</h2>
             <p>Please keep this window open while your files are being transferred.</p>
@@ -136,6 +251,7 @@ export function SelfUploadScreen() {
               style={{ maxWidth: 160, height: 44, marginTop: 16 }}
               onClick={() => {
                 if (timer.current) clearTimeout(timer.current);
+                upload.cancel();
                 su.patch({ uploading: false });
               }}
             >
@@ -144,7 +260,7 @@ export function SelfUploadScreen() {
           </div>
         )}
 
-        {!su.done && !su.uploading && su.step === 1 && (
+        {!su.done && !uploading && su.step === 1 && (
           <div className="su-card">
             <h2 className="serif">{wantReport ? 'Tell us about this report' : 'Tell us about this study'}</h2>
             <p>
@@ -282,7 +398,7 @@ export function SelfUploadScreen() {
           </div>
         )}
 
-        {!su.done && !su.uploading && su.step === 3 && (
+        {!su.done && !uploading && su.step === 3 && (
           <div className="su-card">
             <h2 className="serif">{wantReport ? 'How will you upload the report?' : 'How will you upload the images?'}</h2>
             <p>

@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { useFormsStore } from '@/store/dashboard/formsStore';
 import { useWizardStore } from '@/store/dashboard/wizardStore';
 import { useDomainData } from '@/hooks/useDomainData';
 import { useCreateCenter } from '@/hooks/mutations';
+import { useAppDispatch } from '@/store/hook';
+import { addImageCenter, getAllImageCenterList } from '@/redux/request/action';
+import { showAlert } from '@/components/common/showAlert';
 import { formatUSPhone, isValidEmail } from '@/utils/format';
 import type { Center } from '@/types';
 
@@ -10,6 +14,8 @@ export function AddCenterModal() {
   const patchWizard = useWizardStore((s) => s.patch);
   const { centers } = useDomainData();
   const createCenter = useCreateCenter();
+  const dispatch = useAppDispatch();
+  const [saving, setSaving] = useState(false);
 
   if (!addCenterOpen) return null;
 
@@ -19,18 +25,57 @@ export function AddCenterModal() {
     acForm.name.trim() && acForm.addr.trim() && (acForm.email.trim() || acForm.fax.trim()) && emailOk && faxOk;
 
   const submit = async () => {
-    if (!valid) return;
+    if (!valid || saving) return;
+    const name = acForm.name.trim();
+    const addr = acForm.addr.trim();
+
+    // ── Wizard context → real lab-center API ─────────────────────────────────
+    if (addCenterCtx === 'wizard') {
+      setSaving(true);
+      try {
+        await dispatch(
+          addImageCenter({
+            name,
+            email: acForm.email.trim(),
+            phoneNumber: acForm.phone.replace(/\D/g, ''),
+            faxNumber: acForm.fax.replace(/\D/g, '') || undefined,
+            phoneCode: '+1',
+            location: addr,
+            address: addr,
+            streetAddress: addr,
+            city: '',
+            state: '',
+            zipCode: '',
+          }),
+        ).unwrap();
+        showAlert({ message: 'Center added successfully', status: 'success', autoClose: 6000 });
+        // Refresh and surface the new center so the user can select it.
+        await dispatch(
+          getAllImageCenterList({ name: '', email: '', city: '', state: '', searchString: name, page: 1, size: 100 }),
+        );
+        patchWizard({ centerSearch: name });
+        resetCenter();
+        closeAddCenter();
+      } catch (error: any) {
+        const message = error?.headers?.message || error?.message || 'Something went wrong';
+        showAlert({ message, status: 'error', autoClose: 6000 });
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // ── Other contexts → existing mock domain data path ──────────────────────
     const id = Math.max(...centers.map((c) => c.id)) + 1;
     const center: Center = {
       id,
-      name: acForm.name.trim(),
-      address: acForm.addr.trim(),
+      name,
+      address: addr,
       phone: acForm.phone.trim(),
       email: acForm.email.trim(),
       fax: acForm.fax.trim(),
     };
     await createCenter.mutateAsync(center);
-    if (addCenterCtx === 'wizard') patchWizard({ centerId: id, centerSearch: center.name });
     resetCenter();
     closeAddCenter();
   };
@@ -110,11 +155,11 @@ export function AddCenterModal() {
           )}
         </div>
         <div className="af-btns">
-          <button className="btn btn-ghost" onClick={closeAddCenter}>
+          <button className="btn btn-ghost" onClick={closeAddCenter} disabled={saving}>
             Cancel
           </button>
-          <button className="btn btn-primary" onClick={submit} disabled={!valid}>
-            {addCenterCtx === 'wizard' ? 'Add & select this center' : 'Add center'}
+          <button className="btn btn-primary" onClick={submit} disabled={!valid || saving}>
+            {saving ? 'Saving…' : addCenterCtx === 'wizard' ? 'Add & select this center' : 'Add center'}
           </button>
         </div>
       </div>

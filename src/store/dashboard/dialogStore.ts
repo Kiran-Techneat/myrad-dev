@@ -40,6 +40,10 @@ interface DialogState {
   imgDetailOpen: boolean;
   imgDetailId: Study['id'] | null;
 
+  /** Report preview modal (per-study PDF at `reportUrl`). */
+  reportModalOpen: boolean;
+  reportModalUrl: string | null;
+
   helpOpen: boolean;
   help: HelpState;
 
@@ -60,6 +64,8 @@ interface DialogState {
   confirmYes: () => void;
   openImgDetail: (id: Study['id']) => void;
   closeImgDetail: () => void;
+  openReportModal: (url: string) => void;
+  closeReportModal: () => void;
   toggleHelp: () => void;
   closeHelp: () => void;
   setHelp: (patch: Partial<HelpState>) => void;
@@ -90,6 +96,8 @@ export const useDialogStore = create<DialogState>((set, get) => ({
   confirmData: null,
   imgDetailOpen: false,
   imgDetailId: null,
+  reportModalOpen: false,
+  reportModalUrl: null,
   helpOpen: false,
   help: { ...initialHelp },
   openDropdown: null,
@@ -111,6 +119,8 @@ export const useDialogStore = create<DialogState>((set, get) => ({
   },
   openImgDetail: (id) => set({ imgDetailOpen: true, imgDetailId: id }),
   closeImgDetail: () => set({ imgDetailOpen: false }),
+  openReportModal: (reportModalUrl) => set({ reportModalOpen: true, reportModalUrl }),
+  closeReportModal: () => set({ reportModalOpen: false, reportModalUrl: null }),
   toggleHelp: () =>
     set((s) => ({ helpOpen: !s.helpOpen, help: { ...s.help, view: 'hub' } })),
   closeHelp: () => set({ helpOpen: false }),

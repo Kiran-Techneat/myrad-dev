@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -97,6 +97,7 @@ export function SignupForm() {
   };
   const dispatch = useAppDispatch();
   const [busy, setBusy] = useState(false);
+  const lastPayloadRef = useRef<IUserRegisterRequest | null>(null);
 
   const {
     register,
@@ -145,6 +146,7 @@ export function SignupForm() {
       password: values.pwd,
       confirmPassword: values.pwd2,
     };
+    lastPayloadRef.current = payload;
     setBusy(true);
     try {
       const res = await dispatch(userRegister(payload)).unwrap();
@@ -184,7 +186,7 @@ export function SignupForm() {
   };
 
   if (auth.signupStep === 'otp') {
-    return <RegisterOtpStep />;
+    return <RegisterOtpStep lastPayload={lastPayloadRef.current} />;
   }
 
   return (
@@ -401,7 +403,7 @@ const otpSchema: yup.ObjectSchema<{ otp: string }> = yup.object({
     .matches(/^\d{6}$/, 'Enter the 6-digit code'),
 });
 
-function RegisterOtpStep() {
+function RegisterOtpStep({ lastPayload }: { lastPayload: IUserRegisterRequest | null }) {
   const auth = useAuthStore();
   const navigate = useNavigate();
   const closeDropdown = useDialogStore((s) => s.closeDropdown);
@@ -418,6 +420,25 @@ function RegisterOtpStep() {
     mode: 'onTouched',
     defaultValues: { otp: '' },
   });
+
+  const handleResend = async () => {
+    if (!lastPayload) return;
+    try {
+      const res = await dispatch(userRegister(lastPayload)).unwrap();
+      auth.setSessionId(res.sessionId);
+      auth.setOtpHint(res.otp ?? null);
+      showAlert({ message: 'A new code has been sent.', status: 'success' });
+    } catch (err: any) {
+      showAlert({
+        message:
+          err?.headers?.message ||
+          firstErrorListMessage(err?.errorlist) ||
+          err?.message ||
+          'Could not resend the code.',
+        status: 'error',
+      });
+    }
+  };
 
   const onSubmit = async (values: { otp: string }) => {
     if (!auth.sessionId) {
@@ -496,6 +517,9 @@ function RegisterOtpStep() {
             {errors.otp.message}
           </div>
         )}
+      </div>
+      <div className="foot" style={{ marginBottom: 20 }}>
+        Didn&apos;t get it? <a onClick={() => void handleResend()}>Resend code</a>
       </div>
       <button
         className="btn btn-primary btn-block btn-lg"

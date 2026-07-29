@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 
 interface Props {
-  onDrawn: () => void;
+  /** Fired on each stroke end with the current canvas as a base64 PNG data URL. */
+  onDrawn: (dataUrl: string) => void;
   /** Bumping this key clears the canvas. */
   clearKey: number;
 }
@@ -71,10 +72,10 @@ export function SignaturePad({ onDrawn, clearKey }: Props) {
   const end = () => {
     if (!drawing.current) return;
     drawing.current = false;
-    if (!drawnRef.current) {
-      drawnRef.current = true;
-      onDrawn();
-    }
+    drawnRef.current = true;
+    // Report the latest signature image on every stroke end.
+    const node = canvasRef.current;
+    if (node) onDrawn(node.toDataURL('image/png'));
   };
 
   return (

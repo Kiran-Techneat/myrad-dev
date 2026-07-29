@@ -35,5 +35,6 @@
 .pfam-nm { font-weight: 700; font-size: 15.5px; }
 .pfam-sub { font-size: 13.5px; color: var(--ink2); margin-top: 2px; }
 .pcard-av { width: 74px; height: 74px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 26px; flex: none; }
+.pcard-av:hover .pcard-av-overlay { opacity: 1 !important; }
 .pcard-nm { font-size: 22px; font-weight: 800; }
 .pcard-sub { color: var(--ink2); font-size: 15px; margin-top: 3px; }

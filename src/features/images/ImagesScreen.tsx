@@ -1,29 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { StudyIcon } from '@/components/common/StudyIcon';
-import { useDomainData } from '@/hooks/useDomainData';
+import { usePatientFilter } from '@/hooks/usePatientFilter';
+import { useMyStudies } from '@/hooks/useMyStudies';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useDialogStore } from '@/store/dashboard/dialogStore';
 import { useOpenShare } from '@/hooks/useOpenShare';
 import type { Study } from '@/types';
 
+const PAGE_SIZE = 10;
+
 export function ImagesScreen() {
-  const { allStudies, showingAllPatients, patientMatches } = useDomainData();
+  const { showingAllPatients, patientMatches } = usePatientFilter();
+  const { studies, data, refresh } = useMyStudies();
   const nav = useAppNavigate();
   const openImgDetail = useDialogStore((s) => s.openImgDetail);
   const { shareStudies } = useOpenShare();
 
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Array<Study['id']>>([]);
 
-  const readyStudies = allStudies.filter((x) => x.status === 'ready' && patientMatches(x.patient));
-  const filtered = readyStudies.filter((x) =>
-    `${x.name} ${x.place} ${x.date} ${x.patient ?? ''}`.toLowerCase().includes(query.toLowerCase()),
-  );
+  // Server-side search + pagination (debounced so typing doesn't spam the API).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      refresh({ searchString: query.trim(), page, size: PAGE_SIZE });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, page, refresh]);
 
-  const openViewer = (x: Study) =>
-    nav.openViewer({ from: 'images', studyId: x.id, tab: x.hasImages === false ? 'report' : 'images' });
+  const onSearchChange = (v: string) => {
+    setQuery(v);
+    setPage(1);
+  };
+
+  const totalPages = data?.totalpages ?? 1;
+  const currentPage = data?.currentpage ?? page;
+
+  // Patient / status filter still applied client-side on the current page.
+  const readyStudies = studies.filter((x) => x.status === 'ready' && patientMatches(x.patient));
+
+  const openViewer = (x: Study) => {
+    if (x.hasImages === false) {
+      nav.openViewer({ from: 'images', studyId: x.id, tab: 'report' });
+    } else {
+      nav.openImageViewer(x);
+    }
+  };
 
   const toggleSelect = (id: Study['id']) =>
     setSelectedIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
@@ -56,10 +80,10 @@ export function ImagesScreen() {
           type="text"
           placeholder="Search name, type or body part"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
         {query && (
-          <button className="search-clear" onClick={() => setQuery('')}>
+          <button className="search-clear" onClick={() => onSearchChange('')}>
             <Icon name="x" sw={2.4} />
           </button>
         )}
@@ -93,7 +117,7 @@ export function ImagesScreen() {
         )}
       </div>
 
-      {filtered.map((s) => {
+      {readyStudies.map((s) => {
         const sel = selectedIds.includes(s.id);
         return (
           <div
@@ -146,6 +170,28 @@ export function ImagesScreen() {
         );
       })}
 
+      {readyStudies.length === 0 && (
+        <div
+          className="center-empty"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            minHeight: '46vh',
+            color: 'var(--ink2)',
+          }}
+        >
+          <div
+            className="center-empty-title"
+            style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}
+          >
+            No images added
+          </div>
+        </div>
+      )}
+
       {selectMode && (
         <button
           className="btn btn-primary btn-block btn-share"
@@ -156,6 +202,40 @@ export function ImagesScreen() {
           <Icon name="share" sw={1.8} />
           Share selected with Healthcare Provider, Family or Friend
         </button>
+      )}
+
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 14,
+            marginTop: 18,
+          }}
+        >
+          <button
+            className="btn btn-ghost"
+            style={{ maxWidth: 120 }}
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            <Icon name="chevronLeft" sw={1.8} />
+            Prev
+          </button>
+          <span style={{ fontSize: 14, color: 'var(--ink2)' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="btn btn-ghost"
+            style={{ maxWidth: 120 }}
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Next
+            <Icon name="chevronRight" sw={1.8} />
+          </button>
+        </div>
       )}
     </div>
   );

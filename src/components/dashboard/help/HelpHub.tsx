@@ -1,20 +1,17 @@
-import { useLocation } from 'react-router-dom';
 import { Icon } from '@/components/common/Icon';
 import { useDialogStore } from '@/store/dashboard/dialogStore';
 import { useNavStore } from '@/store/dashboard/navStore';
-import { screenFromPath, staffViewFromPath } from '@/routes/paths';
 import { useDomainData } from '@/hooks/useDomainData';
 import { fmtLong } from '@/utils/format';
 
 export function HelpHub() {
   const { helpOpen, help, closeHelp, setHelp, setHelpView, sendChat, showNotice } = useDialogStore();
-  const { pathname } = useLocation();
   const selectedReqId = useNavStore((s) => s.selectedReqId);
   const { requests, centers, people } = useDomainData();
 
   if (!helpOpen) return null;
 
-  const isStaffCtx = screenFromPath(pathname) === 'staff' && staffViewFromPath(pathname) !== 'walkin';
+  const isStaffCtx = false;
   const testReq =
     requests.find((r) => r.id === selectedReqId) ??
     requests.find((r) => r.items.some((it) => it.status === 'pending')) ??

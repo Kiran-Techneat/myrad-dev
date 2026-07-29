@@ -57,6 +57,20 @@ export interface Study {
   selfNotes?: string;
   selfKind?: string;
   walkIn?: boolean;
+  // Optional keys carried through from the real Images-service API (IScanFile).
+  // Present on studies mapped from the files-service; absent on mock studies.
+  linkId?: string;
+  scanItemId?: string;
+  patientId?: string;
+  reportUrl?: string | null;
+  uploadSource?: string | null;
+  statusRaw?: string;
+  series?: Array<{
+    studyDate: string;
+    seriesName: string;
+    seriesLabel: string;
+    seriesInstanceUid: string;
+  }> | null;
 }
 
 export interface RequestItem {
@@ -66,6 +80,10 @@ export interface RequestItem {
   dateLabel?: string;
   notFound?: boolean;
   centerNote?: string;
+  reportUrl?: string | null;
+  scanItemId?: string;
+  linkId?: string;
+  uploadSource?: string | null;
 }
 
 export interface ImagingRequest {

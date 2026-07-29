@@ -6,6 +6,7 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { AddProviderModal } from './AddProviderModal';
 import { AddFamilyModal } from './AddFamilyModal';
 import { AddCenterModal } from './AddCenterModal';
+import { ReportModal } from './ReportModal';
 import { ImageDetailModal } from '@/features/images/ImageDetailModal';
 
 /** All globally-mounted modal/overlay layers. */
@@ -19,6 +20,7 @@ export function Overlays() {
       <AddProviderModal />
       <AddFamilyModal />
       <AddCenterModal />
+      <ReportModal />
       <NoticeModal />
       <ConfirmModal />
     </>

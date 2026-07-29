@@ -18,6 +18,8 @@ interface SelfUploadState {
   linkNote: string;
   uploading: boolean;
   done: boolean;
+  /** Files captured from the folder / file picker for a real upload. */
+  files: File[];
 
   reset: () => void;
   patch: (patch: Partial<SelfUploadState>) => void;
@@ -39,6 +41,7 @@ function fresh(): Omit<SelfUploadState, 'reset' | 'patch'> {
     linkNote: '',
     uploading: false,
     done: false,
+    files: [],
   };
 }
 

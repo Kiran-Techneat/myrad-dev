@@ -74,3 +74,15 @@
 .share-provider.sel .share-provider-av { background: var(--accent); color: #fff; }
 .share-provider-nm { font-weight: 700; font-size: 14.5px; color: var(--link-blue); }
 .share-provider-spec { font-size: 12.5px; color: var(--ink2); margin-top: 1px; }
+
+/* ── Self-upload: report extract + resume modals ─────────────────────────── */
+.re-card { text-align: left; }
+.re-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
+.re-head-ic { width: 46px; height: 46px; border-radius: 14px; background: var(--accent-t); color: var(--accent-d); display: flex; align-items: center; justify-content: center; flex: none; }
+.re-head-ic .ic { width: 24px; height: 24px; }
+.re-row { align-items: flex-start; }
+.re-row-lbl { font-size: 12.5px; color: var(--ink2); flex: none; width: 120px; }
+.re-row-val { font-size: 13.5px; font-weight: 600; color: var(--ink); text-align: right; flex: 1; word-break: break-word; }
+.re-row-val.ph { color: var(--ink3); font-weight: 500; }
+.re-summary { background: var(--accent-t); border-radius: 14px; padding: 13px 15px; margin-top: 14px; }
+.re-summary p { margin: 6px 0 0; font-size: 13px; color: var(--ink); white-space: pre-wrap; line-height: 1.5; }

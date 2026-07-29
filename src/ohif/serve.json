@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/ohif/viewer/**", "destination": "/ohif/index.html" },
+    { "source": "/ohif/**", "destination": "/ohif/index.html" },
+    { "source": "/**", "destination": "/index.html" }
+  ]
+}

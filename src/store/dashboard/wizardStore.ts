@@ -2,12 +2,23 @@ import { create } from 'zustand';
 import type { DateMode } from '@/utils/format';
 import type { StudyTag } from '@/types';
 
+/** Structured "when was it done" captured at add-study time, used to build the API payload. */
+export interface StudyDate {
+  mode: DateMode;
+  month: string;
+  year: string;
+  exact: string;
+  from: string;
+  to: string;
+}
+
 export interface AddedStudy {
   typeLabel: string;
   partLabel: string;
   dateLabel: string;
   tag: StudyTag;
   label: string;
+  date: StudyDate;
 }
 
 export type WizStepKey = 'person' | 'center' | 'studies' | 'review';
@@ -21,7 +32,7 @@ interface WizardState {
   mrn: string;
 
   centerSearch: string;
-  centerId: number | null;
+  centerId: string | null;
 
   selType: string | null;
   selPart: string | null;
@@ -40,6 +51,10 @@ interface WizardState {
 
   note: string;
   sigDrawn: boolean;
+  /** Drawn signature as a base64 PNG data URL (sent to /create). */
+  signature: string | null;
+  /** Temporary HTTPS link to the stored signature, returned by /create. */
+  signatureUrl: string | null;
 
   /** Month/year custom dropdown open flags (mobile). */
   dpMonthOpen: boolean;
@@ -73,6 +88,8 @@ function freshWizard(): Omit<WizardState, 'reset' | 'patch'> {
     dateTo: '',
     note: '',
     sigDrawn: false,
+    signature: null,
+    signatureUrl: null,
     dpMonthOpen: false,
     dpYearOpen: false,
   };

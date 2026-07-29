@@ -1,49 +1,77 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/common/Icon';
-import { useDomainData } from '@/hooks/useDomainData';
+import { usePatientFilter } from '@/hooks/usePatientFilter';
+import { useScanRequests } from '@/hooks/useScanRequests';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useDialogStore } from '@/store/dashboard/dialogStore';
 import { statusMeta } from '@/utils/status';
-import type { ImagingRequest } from '@/types';
 import { cx } from '@/utils/cx';
 import styles from './requests.module.scss';
 
-type Filter = 'all' | 'progress' | 'ready' | 'cancelled';
+type Filter = 'all' | 'progress' | 'partial' | 'ready' | 'cancelled';
 
-const PILLS: { k: Filter; l: string }[] = [
+const PILLS: { k: Filter; l: string; status?: string }[] = [
   { k: 'all', l: 'All' },
-  { k: 'progress', l: 'In progress' },
-  { k: 'ready', l: 'Ready' },
-  { k: 'cancelled', l: 'Cancelled' },
+  { k: 'progress', l: 'In progress', status: 'PENDING' },
+  { k: 'partial', l: 'Partly ready', status: 'PartiallyUploaded' },
+  { k: 'ready', l: 'Ready', status: 'COMPLETED' },
+  { k: 'cancelled', l: 'Cancelled', status: 'REVOKED' },
 ];
 
-const FILTER_FN: Record<Filter, (r: ImagingRequest) => boolean> = {
-  all: () => true,
-  progress: (r) => r.status === 'pending' || r.status === 'partial',
-  ready: (r) => r.status === 'ready',
-  cancelled: (r) => r.status === 'cancelled',
-};
+const PAGE_SIZE = 10;
 
 export function RequestsScreen() {
-  const { requests, patientMatches } = useDomainData();
+  const { patientMatches } = usePatientFilter();
+  const { requests, data, requestDashboard, refresh } = useScanRequests();
   const nav = useAppNavigate();
   const openGetSheet = useDialogStore((s) => s.openGetSheet);
 
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
-  const filtered = requests
-    .filter(FILTER_FN[filter])
-    .filter((r) => patientMatches(r.patient))
-    .filter((r) => {
-      const q = query.trim().toLowerCase();
-      if (!q) return true;
-      const hay = [r.center, r.patient, r.id, ...r.items.map((it) => it.label)]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return hay.includes(q);
-    });
+  const status = PILLS.find((p) => p.k === filter)?.status;
+
+  // Server-side search + status filter + pagination (debounced so typing doesn't
+  // spam the API). Mirrors ImagesScreen.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      refresh({ searchString: query.trim(), status, page, size: PAGE_SIZE });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, status, page, refresh]);
+
+  const onSearchChange = (v: string) => {
+    setQuery(v);
+    setPage(1);
+  };
+
+  const onFilterChange = (k: Filter) => {
+    setFilter(k);
+    setPage(1);
+  };
+
+  const totalPages = data?.totalpages ?? 1;
+  const currentPage = data?.currentpage ?? page;
+
+  // Active-patient filter is still applied client-side on the current page.
+  const filtered = requests.filter((r) => patientMatches(r.patient));
+
+  const countFor = (k: Filter): number | undefined => {
+    if (!requestDashboard) return undefined;
+    switch (k) {
+      case 'all':
+        return requestDashboard.total;
+      case 'progress':
+        return requestDashboard.pending;
+      case 'partial':
+        return requestDashboard.partiallyUploaded;
+      case 'ready':
+        return requestDashboard.completed;
+      case 'cancelled':
+        return requestDashboard.cancelledRequest;
+    }
+  };
 
   return (
     <div className="wrap">
@@ -77,25 +105,29 @@ export function RequestsScreen() {
           type="text"
           placeholder="Search study, body part, center or patient"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
         {query && (
-          <button className="search-clear" onClick={() => setQuery('')}>
+          <button className="search-clear" onClick={() => onSearchChange('')}>
             <Icon name="x" sw={2.4} />
           </button>
         )}
       </div>
 
       <div className={styles.fpills}>
-        {PILLS.map((p) => (
-          <button
-            key={p.k}
-            className={cx(styles.fpill, filter === p.k && styles.on)}
-            onClick={() => setFilter(p.k)}
-          >
-            {p.l}
-          </button>
-        ))}
+        {PILLS.map((p) => {
+          const c = countFor(p.k);
+          return (
+            <button
+              key={p.k}
+              className={cx(styles.fpill, filter === p.k && styles.on)}
+              onClick={() => onFilterChange(p.k)}
+            >
+              {p.l}
+              {c != null && ` (${c})`}
+            </button>
+          );
+        })}
       </div>
 
       {filtered.map((r) => {
@@ -134,6 +166,62 @@ export function RequestsScreen() {
           </div>
         );
       })}
+
+      {filtered.length === 0 && (
+        <div
+          className="center-empty"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            minHeight: '46vh',
+            color: 'var(--ink2)',
+          }}
+        >
+          <div
+            className="center-empty-title"
+            style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}
+          >
+            No request created
+          </div>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 14,
+            marginTop: 18,
+          }}
+        >
+          <button
+            className="btn btn-ghost"
+            style={{ maxWidth: 120 }}
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            <Icon name="chevronLeft" sw={1.8} />
+            Prev
+          </button>
+          <span style={{ fontSize: 14, color: 'var(--ink2)' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="btn btn-ghost"
+            style={{ maxWidth: 120 }}
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            Next
+            <Icon name="chevronRight" sw={1.8} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

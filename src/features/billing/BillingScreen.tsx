@@ -1,9 +1,167 @@
-import { useState } from 'react';
-import { useDialogStore } from '@/store/dashboard/dialogStore';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import dayjs from 'dayjs';
+import { useAppDispatch, useAppSelector } from '@/store/hook';
+import { getBillingStatus, checkoutAnnual, checkoutPayPerUse } from '@/redux/billing/action';
+import { isProvisioned, planLabelOf } from '@/utils/entitlements';
+import type { Entitlements, Plan } from '@/utils/entitlements';
+
+// Credits/subscriptions are provisioned by the Stripe webhook, which can land after the browser
+// is redirected back. Poll briefly rather than showing the pre-payment plan.
+const POLL_ATTEMPTS = 10;
+const POLL_INTERVAL_MS = 2000;
+const TOAST_DURATION_MS = 9000;
+// The confirmation toast replaces itself in place as the poll resolves, so the user sees one
+// notification move from "confirming" to its outcome rather than a stack of three.
+const CONFIRM_TOAST_ID = 'billing-confirm';
 
 export function BillingScreen() {
-  const showNotice = useDialogStore((s) => s.showNotice);
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const entitlements = useAppSelector((s) => s.billing.entitlements);
+  const loadingStatus = useAppSelector((s) => s.billing.loadingStatus);
+
   const [autoRenew, setAutoRenew] = useState(true);
+  const [loadingAnnual, setLoadingAnnual] = useState(false);
+  const [loadingPayPerUse, setLoadingPayPerUse] = useState(false);
+
+  // The redirect is a property of how this page was entered, so read it once. Reading it live
+  // would tie the confirmation effect to the URL, and the effect rewrites the URL itself.
+  const [redirect] = useState(() => ({
+    isSuccess: location.pathname === '/billing/success',
+    isCancel: location.pathname === '/billing/cancel',
+    purchasedPlan: searchParams.get('plan') as Plan | null,
+  }));
+
+  // `navigate` is stable but not referentially guaranteed; keep it out of the effect deps.
+  const navigateRef = useRef(navigate);
+  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
+
+  const fetchStatus = useCallback(async (): Promise<Entitlements | null> => {
+    try {
+      const res = await dispatch(getBillingStatus()).unwrap();
+      return res?.recordInfo ?? null;
+    } catch {
+      return null;
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const { isSuccess, isCancel, purchasedPlan } = redirect;
+    let cancelled = false;
+
+    const confirmPurchase = async () => {
+      if (!isSuccess && !isCancel) {
+        await fetchStatus();
+        return;
+      }
+
+      if (isCancel) {
+        await fetchStatus();
+        if (cancelled) return;
+        toast.info('Checkout was canceled and you have not been charged. Your plan is unchanged.', {
+          toastId: CONFIRM_TOAST_ID,
+          autoClose: TOAST_DURATION_MS,
+        });
+        navigateRef.current('/billing', { replace: true });
+        return;
+      }
+
+      // Notify immediately so the user is never left staring at their old plan while the webhook
+      // lands. This one stays up until the poll resolves it below.
+      toast.info('Confirming your payment… this usually takes a few seconds.', {
+        toastId: CONFIRM_TOAST_ID,
+        autoClose: false,
+        closeButton: false,
+      });
+      navigateRef.current('/billing', { replace: true });
+
+      for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+        const latest = await fetchStatus();
+        if (cancelled) return;
+
+        if (latest && isProvisioned(latest, purchasedPlan)) {
+          toast.update(CONFIRM_TOAST_ID, {
+            render: successMessage(latest),
+            type: 'success',
+            autoClose: TOAST_DURATION_MS,
+            closeButton: true,
+          });
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+      if (cancelled) return;
+
+      // Payment went through on Stripe's side; only our provisioning is lagging.
+      toast.update(CONFIRM_TOAST_ID, {
+        render: 'Your payment was received, but we are still confirming it. Your plan will update shortly — no further action is needed.',
+        type: 'warning',
+        autoClose: TOAST_DURATION_MS,
+        closeButton: true,
+      });
+    };
+
+    confirmPurchase();
+    return () => {
+      cancelled = true;
+      // The "confirming" toast never auto-closes, so it would outlive the page if the user
+      // navigates away mid-poll.
+      toast.dismiss(CONFIRM_TOAST_ID);
+    };
+  }, [redirect, fetchStatus]);
+
+  const handleCheckoutAnnual = async () => {
+    try {
+      setLoadingAnnual(true);
+      const res = await dispatch(checkoutAnnual()).unwrap();
+      if (res?.recordInfo) window.location.href = res.recordInfo;
+    } catch (error: any) {
+      toast.error('Checkout failed: ' + (error?.headers?.message || 'Please try again.'));
+    } finally {
+      setLoadingAnnual(false);
+    }
+  };
+
+  const handleCheckoutPayPerUse = async () => {
+    try {
+      setLoadingPayPerUse(true);
+      const res = await dispatch(checkoutPayPerUse({ credits: 1 })).unwrap();
+      if (res?.recordInfo) window.location.href = res.recordInfo;
+    } catch (error: any) {
+      toast.error('Checkout failed: ' + (error?.headers?.message || 'Please try again.'));
+    } finally {
+      setLoadingPayPerUse(false);
+    }
+  };
+
+  const isSubscribed = entitlements?.profileType === 'subscribed';
+  const isAnnual = isSubscribed && entitlements?.plan === 'annual';
+  const isPayPerUse = isSubscribed && entitlements?.plan === 'payPerUse';
+  const isTrial = entitlements?.profileType === 'trial';
+
+  const currentPlanSubtext = (): string => {
+    if (!entitlements) return '';
+    if (isAnnual) return 'Unlimited imaging requests';
+    if (isPayPerUse) {
+      const credits = entitlements.creditsRemaining ?? 0;
+      return `${credits} study credit${credits === 1 ? '' : 's'} remaining`;
+    }
+    if (isTrial) {
+      const credits = entitlements.creditsRemaining ?? 0;
+      const ends = entitlements.trialEndsAt
+        ? ` · Trial ends ${dayjs(entitlements.trialEndsAt).format('MMM D, YYYY')}`
+        : '';
+      return `${credits} free stud${credits === 1 ? 'y' : 'ies'} remaining${ends}`;
+    }
+    return entitlements.canUpload
+      ? '1 free study remaining — choose a plan to keep uploading'
+      : 'No uploads remaining — choose a plan to continue';
+  };
 
   return (
     <div className="wrap" style={{ maxWidth: 1080 }}>
@@ -19,17 +177,17 @@ export function BillingScreen() {
           <div>
             <div className="bill-cur-plan">
               <span className="bill-cur-dot" />
-              Trial Plan
+              {loadingStatus && !entitlements ? 'Loading…' : entitlements ? planLabelOf(entitlements) : 'No Plan'}
             </div>
-            <div className="bill-cur-meta">Expires Jul 7, 2026 · Upgrade to unlock unlimited access</div>
+            <div className="bill-cur-meta">{currentPlanSubtext()}</div>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => showNotice('Redirecting…', "You're being redirected to secure payment.")}
-          >
-            ⚡ Upgrade to Annual
-          </button>
+          {!isAnnual && (
+            <button className="btn btn-primary" onClick={handleCheckoutAnnual} disabled={loadingAnnual}>
+              {loadingAnnual ? 'Redirecting…' : '⚡ Upgrade to Annual'}
+            </button>
+          )}
         </div>
+        {/* Usage meters are static placeholders — the billing/status API does not yet return per-feature counts. */}
         <div className="bill-usage-grid">
           <div>
             <div className="bill-usage-lbl-row">
@@ -72,7 +230,8 @@ export function BillingScreen() {
 
       <div className="bill-plans">
         <div className="bill-plan dim">
-          <div className="bill-plan-tag current-tag">✓ Current plan</div>
+          {isTrial && <div className="bill-plan-tag current-tag">✓ Current plan</div>}
+          {!isTrial && <div className="bill-plan-tag" style={{ visibility: 'hidden' }}>·</div>}
           <div className="bill-plan-name serif">Trial</div>
           <div className="bill-plan-tagline">Try before you commit</div>
           <div className="bill-price-row">
@@ -85,8 +244,9 @@ export function BillingScreen() {
             <li><span className="bill-feat-dot">✓</span>Share with 1 doctor</li>
             <li><span className="bill-feat-dot">✓</span>2 AI report summaries</li>
           </ul>
+          {/* The trial cannot be chosen — it is granted on signup and expires. */}
           <button className="bill-plan-btn muted" disabled>
-            Current plan
+            {isTrial ? 'Current plan' : 'Trial'}
           </button>
         </div>
         <div className="bill-plan featured">
@@ -104,15 +264,14 @@ export function BillingScreen() {
             <li><span className="bill-feat-dot">✓</span>Unlimited AI report summaries</li>
             <li><span className="bill-feat-dot">✓</span>Priority support</li>
           </ul>
-          <button
-            className="bill-plan-btn inv"
-            onClick={() => showNotice('Redirecting…', "You're being redirected to secure payment.")}
-          >
-            Choose Annual →
+          <button className="bill-plan-btn inv" onClick={handleCheckoutAnnual} disabled={loadingAnnual || isAnnual}>
+            {loadingAnnual ? 'Redirecting…' : isAnnual ? 'Current plan' : 'Choose Annual →'}
           </button>
         </div>
         <div className="bill-plan">
-          <div className="bill-plan-tag" style={{ visibility: 'hidden' }}>·</div>
+          {isPayPerUse
+            ? <div className="bill-plan-tag current-tag">✓ Current plan</div>
+            : <div className="bill-plan-tag" style={{ visibility: 'hidden' }}>·</div>}
           <div className="bill-plan-name serif">Pay Per Use</div>
           <div className="bill-plan-tagline">Only pay when you need it</div>
           <div className="bill-price-row">
@@ -127,9 +286,10 @@ export function BillingScreen() {
           </ul>
           <button
             className="bill-plan-btn secondary"
-            onClick={() => showNotice('Plan updated', "You've switched to Pay Per Use.")}
+            onClick={handleCheckoutPayPerUse}
+            disabled={loadingPayPerUse || isAnnual}
           >
-            Switch to Pay Per Use
+            {loadingPayPerUse ? 'Redirecting…' : isPayPerUse ? 'Buy Another Credit' : 'Switch to Pay Per Use'}
           </button>
         </div>
       </div>
@@ -159,10 +319,7 @@ export function BillingScreen() {
               <br />
               Add a card to enable upgrades.
             </div>
-            <button
-              className="btn btn-ghost btn-block"
-              onClick={() => showNotice('Redirecting…', "You're being redirected to secure card entry.")}
-            >
+            <button className="btn btn-ghost btn-block" onClick={handleCheckoutAnnual} disabled={loadingAnnual}>
               + Add payment method
             </button>
           </div>
@@ -177,3 +334,11 @@ export function BillingScreen() {
     </div>
   );
 }
+
+const successMessage = (latest: Entitlements): string => {
+  if (latest.plan === 'annual') {
+    return 'Payment successful — you are now subscribed to Annual Unlimited with unlimited imaging requests, storage, and doctor shares.';
+  }
+  const credits = latest.creditsRemaining ?? 0;
+  return `Payment successful — you are now on the Pay Per Use plan with ${credits} study credit${credits === 1 ? '' : 's'} available.`;
+};

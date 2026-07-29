@@ -1,16 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { StudyIcon } from '@/components/common/StudyIcon';
 import { Dropdown } from '@/components/common/Dropdown';
 import { SignaturePad } from '@/components/common/SignaturePad';
-import { useDomainData } from '@/hooks/useDomainData';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useWizardStore } from '@/store/dashboard/wizardStore';
+import { useNavGuardStore } from '@/store/dashboard/navGuardStore';
 import { useFormsStore } from '@/store/dashboard/formsStore';
-import { useCreateRequest } from '@/hooks/mutations';
+import { useAppDispatch, useAppSelector } from '@/store/hook';
+import { createNewRequest, getAllImageCenterList } from '@/redux/request/action';
+import { showAlert } from '@/components/common/showAlert';
 import { STUDY_TYPES, PART_GROUPS, WIZ_STEPS } from '@/constants/studyTypes';
-import { MONTHS, ageOf, fmtLong, fmtMDY, resolveStudyDate, todayIso, todayLabel, yearRange } from '@/utils/format';
-import type { Center, ImagingRequest, StudyTag } from '@/types';
+import { MONTHS, ageOf, fmtLong, fmtMDY, formatUSPhone, resolveStudyDate, todayIso, yearRange } from '@/utils/format';
+import type { INewRequestFormRequest } from '@/redux/request/types/request';
+import type { StudyTag } from '@/types';
+
+/** UI-friendly imaging center adapted from the redux IImageCenterResponse. */
+interface WizCenter {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  fax: string;
+}
+
+const initialsOf = (first?: string, last?: string) =>
+  `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || 'U';
+
+/** Profile stores ISO dates; the wizard's ageOf/fmtLong expect MM/DD/YYYY. */
+const toMDY = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? fmtMDY(v) : v ?? '');
 
 const DATE_MODES: [string, string][] = [
   ['my', 'Month & Year'],
@@ -20,20 +39,118 @@ const DATE_MODES: [string, string][] = [
 ];
 
 export function WizardScreen() {
-  const { people, centers } = useDomainData();
   const nav = useAppNavigate();
   const w = useWizardStore();
   const openAddFamily = useFormsStore((s) => s.openAddFamily);
   const openAddCenter = useFormsStore((s) => s.openAddCenter);
-  const createRequest = useCreateRequest();
+  const dispatch = useAppDispatch();
+  const userProfile = useAppSelector((s) => s.user.userProfile);
+  const allImageCenterList = useAppSelector((s) => s.request.allImageCenterList);
   const [sigClearKey, setSigClearKey] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [pickedCenter, setPickedCenter] = useState<WizCenter | null>(null);
+  const [debouncedCenterSearch, setDebouncedCenterSearch] = useState('');
 
   const stepOrder = WIZ_STEPS.map((x) => x.key);
   const curIdx = stepOrder.indexOf(w.step);
 
+  // ---- Patients (self + family) from the logged-in profile -------------------
+  const people = useMemo(() => {
+    if (!userProfile) return [];
+    const self = {
+      id: userProfile.selfPatientId ?? 'self',
+      name: `${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}`.trim(),
+      initials: initialsOf(userProfile.firstName, userProfile.lastName),
+      sex: userProfile.gender ?? '',
+      dob: toMDY(userProfile.dateOfBirth),
+      isSelf: true,
+      role: 'You',
+    };
+    const family = (userProfile.familyMembers ?? []).map((m) => ({
+      id: m.memberId,
+      name: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim(),
+      initials: initialsOf(m.firstName, m.lastName),
+      sex: m.gender ?? '',
+      dob: toMDY(m.dateOfBirth),
+      isSelf: false,
+      role: m.relationship ?? '',
+    }));
+    return [self, ...family];
+  }, [userProfile]);
+
+  // ---- Centers from redux (master + user), adapted to the card shape ---------
+  const centers = useMemo<WizCenter[]>(() => {
+    const sr = allImageCenterList?.searchResult;
+    const raw = [...(sr?.userCenters ?? []), ...(sr?.masterCenters ?? [])];
+    const seen = new Set<string>();
+    return raw
+      .filter((c) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      })
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        address: c.location || [c.streetAddress, c.city, c.state, c.zipCode].filter(Boolean).join(', '),
+        phone: c.phoneNumber ? formatUSPhone(c.phoneNumber) : '',
+        email: c.email ?? '',
+        fax: c.faxNumber ? formatUSPhone(c.faxNumber) : '',
+      }));
+  }, [allImageCenterList]);
+
+  // Debounce the center search box before hitting the server.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedCenterSearch(w.centerSearch), 400);
+    return () => clearTimeout(t);
+  }, [w.centerSearch]);
+
+  // Fetch centers on mount and whenever the debounced search changes.
+  useEffect(() => {
+    dispatch(
+      getAllImageCenterList({
+        name: '',
+        email: '',
+        city: '',
+        state: '',
+        searchString: debouncedCenterSearch,
+        page: 1,
+        size: 100,
+      }),
+    );
+  }, [dispatch, debouncedCenterSearch]);
+
+  // "Dirty" = there is in-progress work that a stray navigation/refresh would lose.
+  const dirty = w.addedStudies.length > 0 && !w.done;
+
+  // Guard in-app navigation (routed through useAppNavigate) with a confirm modal
+  // while the wizard has unsaved studies. Reads live store state so the predicate
+  // stays accurate without re-registering.
+  useEffect(() => {
+    useNavGuardStore.getState().setGuard(() => {
+      const s = useWizardStore.getState();
+      return s.addedStudies.length > 0 && !s.done;
+    });
+    return () => useNavGuardStore.getState().clearGuard();
+  }, []);
+
+  // Guard a browser refresh/close/tab-change with the native prompt while dirty.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
   const years = yearRange();
   const selType = STUDY_TYPES.find((t) => t.id === w.selType);
-  const selCenter = centers.find((c) => c.id === w.centerId);
+  const selCenter =
+    pickedCenter && pickedCenter.id === w.centerId
+      ? pickedCenter
+      : centers.find((c) => c.id === w.centerId) ?? null;
   const selPerson = people.find((p) => p.id === w.personId);
 
   const dateResolved = resolveStudyDate(w.dateMode, w.dateMonth, w.dateYear, w.dateExact, w.dateFrom, w.dateTo);
@@ -63,15 +180,12 @@ export function WizardScreen() {
   });
   const openGroup = groups.find((r) => r.isOpen) ?? null;
 
-  // ---- Centers filtering ----------------------------------------------------
-  const centerHay = (c: Center) => [c.name, c.address, c.phone, c.email, c.fax].filter(Boolean).join(' ').toLowerCase();
-  const centersFilteredRaw = w.centerSearch
-    ? centers.filter((c) => centerHay(c).includes(w.centerSearch.toLowerCase()))
-    : [];
-  const selCenterPin = centers.find((c) => c.id === w.centerId);
+  // ---- Centers list (search is server-driven; only show once searching) -----
+  const selCenterPin = selCenter;
+  const centersToShow = w.centerSearch ? centers : [];
   const centersFiltered = selCenterPin
-    ? [selCenterPin, ...centersFilteredRaw.filter((c) => c.id !== w.centerId)]
-    : centersFilteredRaw;
+    ? [selCenterPin, ...centersToShow.filter((c) => c.id !== w.centerId)]
+    : centersToShow;
 
   const addDisabled = !w.selType || (groups.length > 0 && !w.selPart) || !dateResolved;
 
@@ -81,7 +195,21 @@ export function WizardScreen() {
     w.patch((cur) => ({
       addedStudies: [
         ...cur.addedStudies,
-        { typeLabel: selType.label, partLabel: w.selPart || '', dateLabel: dateResolved, tag: selType.abbr, label },
+        {
+          typeLabel: selType.label,
+          partLabel: w.selPart || '',
+          dateLabel: dateResolved,
+          tag: selType.abbr,
+          label,
+          date: {
+            mode: w.dateMode,
+            month: w.dateMonth,
+            year: w.dateYear,
+            exact: w.dateExact,
+            from: w.dateFrom,
+            to: w.dateTo,
+          },
+        },
       ],
       selType: null,
       selPart: null,
@@ -106,38 +234,70 @@ export function WizardScreen() {
     if (curIdx > 0) w.patch({ step: stepOrder[curIdx - 1] as typeof w.step });
   };
 
-  const submit = () => {
-    if (!w.sigDrawn || w.addedStudies.length === 0) return;
-    const reqId = `REQ-${1000 + Math.floor(Math.random() * 900)}`;
-    const hasFax = selCenter?.fax;
-    const hasEmail = selCenter?.email;
-    const delivery = hasEmail && hasFax ? 'Email + Fax' : hasFax ? 'Fax' : 'Email';
-    const newRequest: ImagingRequest = {
-      id: reqId,
-      center: selCenter?.name ?? '',
-      centerAddr: selCenter?.address ?? '',
-      centerPhone: selCenter?.phone ?? '',
-      centerEmail: selCenter?.email ?? '',
-      centerFax: selCenter?.fax ?? '',
-      date: todayLabel(),
-      status: 'pending',
-      delivery,
-      patient: selPerson?.name ?? '',
-      mrn: w.mrn || '',
-      note: w.note || '',
-      items: w.addedStudies.map((a) => ({ tag: a.tag, label: a.label, status: 'pending', dateLabel: a.dateLabel || '' })),
+  const submit = async () => {
+    if (!w.sigDrawn || w.addedStudies.length === 0 || submitting) return;
+    if (!w.centerId) {
+      showAlert({ message: 'Please select an imaging center.', status: 'error', autoClose: 6000 });
+      return;
+    }
+    if (!selPerson) {
+      showAlert({ message: 'Please select a patient.', status: 'error', autoClose: 6000 });
+      return;
+    }
+
+    // Exact/range dates ride on each study; approximate month/year go to the
+    // request-level studyPreference (single slot — derived from the first approx study).
+    const scanItems = w.addedStudies.map((a) => ({
+      scanType: a.typeLabel,
+      bodyPoint: a.partLabel,
+      scanDate: a.date.mode === 'ex' ? a.date.exact || null : a.date.mode === 'rg' ? a.date.from || null : null,
+    }));
+
+    const approx = w.addedStudies.find((a) => a.date.mode === 'my' || a.date.mode === 'yr' || a.date.mode === 'rg');
+    let studyPreference: INewRequestFormRequest['studyPreference'] = null;
+    if (approx) {
+      const d = approx.date;
+      if (d.mode === 'rg') {
+        studyPreference = { periodFrom: d.from || null, periodTo: d.to || null, scanMonth: null, scanYear: null };
+      } else if (d.mode === 'my') {
+        studyPreference = { periodFrom: null, periodTo: null, scanMonth: d.month || null, scanYear: d.year || null };
+      } else if (d.mode === 'yr') {
+        studyPreference = { periodFrom: null, periodTo: null, scanMonth: null, scanYear: d.year || null };
+      }
+    }
+
+    const payload: INewRequestFormRequest = {
+      fullName: selPerson.name,
+      age: ageOf(selPerson.dob) ?? 0,
+      gender: selPerson.sex,
+      patientId: String(w.personId),
+      patientMrnNumber: w.mrn || undefined,
+      labCenterId: w.centerId,
+      scanItems,
+      activeDays: 28,
+      remarks: w.note || null,
+      studyPreference,
+      notifyByEmail: true,
+      signature: w.signature ?? undefined,
     };
-    createRequest.mutate(newRequest);
-    w.patch({ done: true, reqId });
+
+    try {
+      setSubmitting(true);
+      const res = await dispatch(createNewRequest(payload)).unwrap();
+      w.patch({ done: true, reqId: res.requestId, signatureUrl: res.signatureUrl });
+    } catch (error: any) {
+      const message = error?.headers?.message || error?.message || 'Something went wrong';
+      showAlert({ message, status: 'error', autoClose: 6000 });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const cancelWizard = () => {
-    if (w.addedStudies.length === 0 || window.confirm('Discard this request? Any studies you have added will be lost.'))
-      nav.go('home');
-  };
+  // The nav guard shows the confirm modal when there are unsaved studies; when
+  // there's nothing to lose it navigates straight through.
+  const cancelWizard = () => nav.go('home');
 
   const typeTag = (id: string): StudyTag => STUDY_TYPES.find((t) => t.id === id)!.abbr;
-
   // ---- Success --------------------------------------------------------------
   if (w.done) {
     return (
@@ -307,7 +467,13 @@ export function WizardScreen() {
                       )}
                     </div>
                   </div>
-                  <button className="sel-type-chg" onClick={() => w.patch({ centerId: null, centerSearch: '' })}>
+                  <button
+                    className="sel-type-chg"
+                    onClick={() => {
+                      setPickedCenter(null);
+                      w.patch({ centerId: null, centerSearch: '' });
+                    }}
+                  >
                     Change
                   </button>
                 </div>
@@ -369,7 +535,10 @@ export function WizardScreen() {
                   <button
                     key={c.id}
                     className={`center-card ${c.id === w.centerId ? 'on' : ''}`}
-                    onClick={() => w.patch({ centerId: c.id })}
+                    onClick={() => {
+                      setPickedCenter(c);
+                      w.patch({ centerId: c.id });
+                    }}
                   >
                     <div className="center-ico">
                       <Icon name="building" />
@@ -860,7 +1029,10 @@ export function WizardScreen() {
             </div>
             {w.addedStudies.length > 0 && (
               <div className="sign-box">
-                <SignaturePad clearKey={sigClearKey} onDrawn={() => w.patch({ sigDrawn: true })} />
+                <SignaturePad
+                  clearKey={sigClearKey}
+                  onDrawn={(dataUrl) => w.patch({ sigDrawn: true, signature: dataUrl })}
+                />
                 {!w.sigDrawn && <div className="sig-ph">Sign here with your mouse or finger</div>}
                 <div className="sig-meta">
                   {w.sigDrawn ? (
@@ -874,7 +1046,7 @@ export function WizardScreen() {
                     className="sig-clear"
                     onClick={() => {
                       setSigClearKey((k) => k + 1);
-                      w.patch({ sigDrawn: false });
+                      w.patch({ sigDrawn: false, signature: null });
                     }}
                   >
                     Clear
@@ -905,9 +1077,9 @@ export function WizardScreen() {
                 className="btn btn-primary"
                 style={{ flex: '0 0 auto', marginLeft: 'auto' }}
                 onClick={submit}
-                disabled={!w.sigDrawn || w.addedStudies.length === 0}
+                disabled={!w.sigDrawn || w.addedStudies.length === 0 || submitting}
               >
-                ✓ Confirm &amp; send
+                {submitting ? 'Sending…' : '✓ Confirm & send'}
               </button>
             </div>
           </>
