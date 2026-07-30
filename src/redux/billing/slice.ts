@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { Entitlements } from "@/utils/entitlements";
-import { getBillingStatus } from "./action";
+import { confirmCheckout, getBillingStatus } from "./action";
 
 interface IBillingState {
     entitlements: Entitlements | null;
@@ -26,6 +26,10 @@ const billingSlice = createSlice({
                 state.loadingStatus = false;
             })
             .addCase(getBillingStatus.rejected, (state) => {
+                state.loadingStatus = false;
+            })
+            .addCase(confirmCheckout.fulfilled, (state, action) => {
+                state.entitlements = action.payload?.recordInfo ?? null;
                 state.loadingStatus = false;
             });
     },

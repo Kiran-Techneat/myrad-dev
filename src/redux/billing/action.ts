@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { IAPIErrorResponse } from "@/interface/base";
 import apiInstance from "@/utils/axios";
-import type { IPayPerUseCheckoutRequest } from "./types/request";
+import type { ICheckoutConfirmRequest, IPayPerUseCheckoutRequest } from "./types/request";
 import type { IBillingStatusResponse, ICheckoutResponse } from "./types/response";
 
 const baseUrl = import.meta.env.VITE_USER_API_URL || import.meta.env.VITE_BASE_URL || "";
@@ -35,6 +35,18 @@ export const checkoutPayPerUse = createAsyncThunk<ICheckoutResponse, IPayPerUseC
     async (payload, { rejectWithValue }) => {
         try {
             const response = await apiInstance.post<ICheckoutResponse>(`${baseUrl}/users-service/api/v1/billing/checkout/pay-per-use`, payload);
+            return response?.data;
+        } catch (error: any | IAPIErrorResponse) {
+            return rejectWithValue(error.response?.data);
+        }
+    }
+);
+
+export const confirmCheckout = createAsyncThunk<IBillingStatusResponse, ICheckoutConfirmRequest, { rejectValue: IAPIErrorResponse }>(
+    "/billing/checkout/confirm",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await apiInstance.post<IBillingStatusResponse>(`${baseUrl}/users-service/api/v1/billing/checkout/confirm`, payload);
             return response?.data;
         } catch (error: any | IAPIErrorResponse) {
             return rejectWithValue(error.response?.data);

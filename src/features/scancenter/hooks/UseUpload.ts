@@ -7,6 +7,8 @@ import {
   scanMultipartInitiate,
   scanMultipartComplete,
   scanMultipartAbort,
+  scanRevoke,
+  scanMessage,
 } from "@/redux/scancenter/action";
 import { resetScanCenter } from "@/redux/scancenter/slice";
 import type { RootState } from "../../../store/store";
@@ -771,6 +773,65 @@ export const useUpload = (id: string | undefined) => {
     }
   };
 
+  // ── Not our patient (revoke) ──────────────────────────────────────────────
+
+  const revokeNotOurPatient = async (): Promise<boolean> => {
+    const token = id;
+    if (!token || !scancenterDetails) return false;
+    const items = scancenterDetails.scanItems ?? [];
+    setLoader(true);
+    try {
+      await Promise.all(
+        items.map((item: any) =>
+          dispatch(scanRevoke({ token, scanItemId: item.id })).unwrap(),
+        ),
+      );
+      // Refresh scancenterDetails so the revoked/wrong-patient status is reflected in the UI.
+      await reValidate(token);
+      showAlert({
+        message: "Marked as not your patient. The request has been revoked.",
+        status: "success",
+        autoClose: 5000,
+      });
+      return true;
+    } catch (err: any) {
+      showAlert({
+        message: err?.message ?? "Failed to revoke the request. Please try again.",
+        status: "error",
+        autoClose: 6000,
+      });
+      return false;
+    } finally {
+      setLoader(false);
+    }
+  };
+
+  // ── Text patient (message) ────────────────────────────────────────────────
+
+  const sendPatientMessage = async (message: string): Promise<boolean> => {
+    const token = id;
+    if (!token || !message.trim()) return false;
+    setLoader(true);
+    try {
+      await dispatch(scanMessage({ token, message: message.trim() })).unwrap();
+      showAlert({
+        message: "Message sent to patient",
+        status: "success",
+        autoClose: 5000,
+      });
+      return true;
+    } catch (err: any) {
+      showAlert({
+        message: err?.message ?? "Failed to send the message. Please try again.",
+        status: "error",
+        autoClose: 6000,
+      });
+      return false;
+    } finally {
+      setLoader(false);
+    }
+  };
+
   // ── Per-Item Send ─────────────────────────────────────────────────────────
 
   const handleSendItem = async (scanItemId: string) => {
@@ -891,6 +952,8 @@ export const useUpload = (id: string | undefined) => {
     performUpload,
     handleComplete,
     handleSendItem,
+    revokeNotOurPatient,
+    sendPatientMessage,
     cancelUpload,
     resumeAllPaused,
     startNewAllPaused,

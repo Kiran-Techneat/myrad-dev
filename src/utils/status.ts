@@ -10,6 +10,7 @@ const META: Record<string, StatusMeta> = {
   pending: { cls: 'pending', label: 'In progress' },
   partial: { cls: 'partial', label: 'Partly ready' },
   cancelled: { cls: 'cancelled', label: 'Cancelled' },
+  wrongPatient: { cls: 'wrongPatient', label: 'Wrong patient — action needed' },
 };
 
 export function statusMeta(s: string): StatusMeta {

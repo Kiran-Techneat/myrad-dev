@@ -1,11 +1,15 @@
 import { Icon } from '@/components/common/Icon';
 import { StudyIcon } from '@/components/common/StudyIcon';
 import { Skeleton } from '@/components/common/Skeleton';
+import { useEffect } from 'react';
 import { useDomainData } from '@/hooks/useDomainData';
+import { useMyStudies } from '@/hooks/useMyStudies';
 import { useAppNavigate } from '@/hooks/useAppNavigate';
 import { useDialogStore } from '@/store/dashboard/dialogStore';
 import { useOpenShare } from '@/hooks/useOpenShare';
-import { useAppSelector } from '@/store/hook';
+import { useAppDispatch, useAppSelector } from '@/store/hook';
+import { getdashboardcount } from '@/redux/myfiles/action';
+import { getRequestDashboard } from '@/redux/request/action';
 import type { Study } from '@/types';
 import styles from './home.module.scss';
 
@@ -28,18 +32,44 @@ function getGreeting(d = new Date()) {
 }
 
 export function HomeScreen() {
-  const { allStudies, requests, showingAllPatients, patientMatches } = useDomainData();
+  const { showingAllPatients, patientMatches, activePatient } = useDomainData();
+  const { studies } = useMyStudies(); // live API; auto-loads on mount when store is empty
+  const dispatch = useAppDispatch();
+  const dashboardcount = useAppSelector((s) => s.myfiles.dashboardcount);
+  const requestDashboard = useAppSelector((s) => s.request.requestDashboard);
   const nav = useAppNavigate();
   const openGetSheet = useDialogStore((s) => s.openGetSheet);
   const { shareStudy } = useOpenShare();
   const userProfile = useAppSelector((s) => s.user.userProfile);
   const loading = useAppSelector((s) => s.user.loading);
 
-  const readyStudies = allStudies.filter((x) => x.status === 'ready' && patientMatches(x.patient));
-  const homeReady = readyStudies.slice(0, 4);
-  const requestsInProgress = requests.filter(
-    (r) => (r.status === 'pending' || r.status === 'partial') && patientMatches(r.patient),
-  ).length;
+  useEffect(() => {
+    dispatch(getdashboardcount());
+    dispatch(getRequestDashboard());
+  }, [dispatch]);
+
+  // Dashboard list uses the same live API as the /images screen (max 4 shown).
+  const apiReadyStudies = studies.filter(
+    (x) => x.status === 'ready' && patientMatches(x.patient),
+  );
+  const homeReady = apiReadyStudies.slice(0, 4);
+
+  // Stat-card counts from the real API, scoped to the selected patient when one is active.
+  const selectedPatientId = activePatient !== 'all' ? activePatient : undefined;
+  const isFiltered = !!selectedPatientId;
+  const patientFileCounts = isFiltered
+    ? dashboardcount?.recordInfo?.byPatient?.[selectedPatientId]
+    : undefined;
+  const patientRequestCounts = isFiltered
+    ? requestDashboard?.byPatient?.[selectedPatientId]
+    : undefined;
+
+  const myImagesCount = isFiltered
+    ? patientFileCounts?.myImages ?? 0
+    : dashboardcount?.recordInfo?.myImages ?? 0;
+  const myRequestCount = isFiltered
+    ? patientRequestCounts?.myRequest ?? 0
+    : requestDashboard?.myRequest ?? 0;
 
   const greetName = userProfile?.firstName ?? '';
 
@@ -106,18 +136,18 @@ export function HomeScreen() {
             <div className={styles["stat-ico"]}>
               <Icon name="image" />
             </div>
-            <div className={styles["stat-num"]}>{readyStudies.length}</div>
+            <div className={styles["stat-num"]}>{myImagesCount}</div>
           </div>
-          <div className={styles["stat-lbl"]}>Images ready to view</div>
+          <div className={styles["stat-lbl"]}>My Images</div>
         </div>
         <div className={styles.stat} onClick={() => nav.go('requests')} style={{ cursor: 'pointer' }}>
           <div className={styles["stat-top"]}>
             <div className={styles["stat-ico"]}>
               <Icon name="clipboard" />
             </div>
-            <div className={styles["stat-num"]}>{requestsInProgress}</div>
+            <div className={styles["stat-num"]}>{myRequestCount}</div>
           </div>
-          <div className={styles["stat-lbl"]}>Requests in progress</div>
+          <div className={styles["stat-lbl"]}>My Requests</div>
         </div>
       </div>
 

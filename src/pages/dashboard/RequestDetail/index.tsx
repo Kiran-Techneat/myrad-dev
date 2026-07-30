@@ -213,6 +213,16 @@ export function RequestDetailScreen() {
         </div>
       </div>
 
+      {selReq.status === 'wrongPatient' && (
+        <div className="help-strip" style={{ background: '#F6ECEB', borderColor: '#E4CECB', marginBottom: 16 }}>
+          <Icon name="alert" sw={1.8} style={{ color: 'var(--rose)' }} />
+          <p style={{ color: '#7A3530' }}>
+            <b>{selReq.center} says this isn&apos;t their patient.</b> Double-check the center you selected, or
+            contact them directly — this request won&apos;t move forward until it&apos;s resolved.
+          </p>
+        </div>
+      )}
+
       <div className="sec-hd">
         <h4>Studies requested ({selReq.items.length})</h4>
       </div>

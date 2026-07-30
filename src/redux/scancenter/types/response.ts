@@ -20,6 +20,7 @@ export interface IScanTokenValidationResponse extends IAPICommonResponse {
     gender: string;
     patientId: string;
     patientMrnNumber?: string;
+    requestId?: string;
     scanItems: IScanItem[];
     description: string | null;
     remarks: string | null;

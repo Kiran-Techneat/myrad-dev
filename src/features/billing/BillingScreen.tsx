@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import dayjs from 'dayjs';
 import { useAppDispatch, useAppSelector } from '@/store/hook';
-import { getBillingStatus, checkoutAnnual, checkoutPayPerUse } from '@/redux/billing/action';
+import { getBillingStatus, checkoutAnnual, checkoutPayPerUse, confirmCheckout } from '@/redux/billing/action';
 import { isProvisioned, planLabelOf } from '@/utils/entitlements';
 import type { Entitlements, Plan } from '@/utils/entitlements';
 
@@ -35,6 +35,7 @@ export function BillingScreen() {
     isSuccess: location.pathname === '/billing/success',
     isCancel: location.pathname === '/billing/cancel',
     purchasedPlan: searchParams.get('plan') as Plan | null,
+    sessionId: searchParams.get('session_id'),
   }));
 
   // `navigate` is stable but not referentially guaranteed; keep it out of the effect deps.
@@ -50,8 +51,20 @@ export function BillingScreen() {
     }
   }, [dispatch]);
 
+  // Provisions the just-completed purchase synchronously so entitlements reflect immediately,
+  // instead of relying on the Stripe webhook (which lags or, in a misconfigured deployed env,
+  // never lands). Returns the confirmed entitlements, or null so the caller falls back to polling.
+  const confirmPayment = useCallback(async (sessionId: string): Promise<Entitlements | null> => {
+    try {
+      const res = await dispatch(confirmCheckout({ sessionId })).unwrap();
+      return res?.recordInfo ?? null;
+    } catch {
+      return null;
+    }
+  }, [dispatch]);
+
   useEffect(() => {
-    const { isSuccess, isCancel, purchasedPlan } = redirect;
+    const { isSuccess, isCancel, purchasedPlan, sessionId } = redirect;
     let cancelled = false;
 
     const confirmPurchase = async () => {
@@ -79,6 +92,22 @@ export function BillingScreen() {
         closeButton: false,
       });
       navigateRef.current('/billing', { replace: true });
+
+      // Try the synchronous confirm first — it provisions immediately when the payment is
+      // already settled on Stripe's side. If it succeeds we skip polling entirely.
+      if (sessionId) {
+        const confirmed = await confirmPayment(sessionId);
+        if (cancelled) return;
+        if (confirmed && isProvisioned(confirmed, purchasedPlan)) {
+          toast.update(CONFIRM_TOAST_ID, {
+            render: successMessage(confirmed),
+            type: 'success',
+            autoClose: TOAST_DURATION_MS,
+            closeButton: true,
+          });
+          return;
+        }
+      }
 
       for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
         const latest = await fetchStatus();
@@ -113,7 +142,7 @@ export function BillingScreen() {
       // navigates away mid-poll.
       toast.dismiss(CONFIRM_TOAST_ID);
     };
-  }, [redirect, fetchStatus]);
+  }, [redirect, fetchStatus, confirmPayment]);
 
   const handleCheckoutAnnual = async () => {
     try {

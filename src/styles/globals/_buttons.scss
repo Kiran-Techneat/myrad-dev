@@ -38,4 +38,5 @@
 .chip.ready { background: var(--accent-t); color: var(--accent-d); }
 .chip.pending { background: var(--gold-t); color: var(--amber); }
 .chip.partial { background: var(--clay-t); color: var(--clay); }
-.chip.cancelled { background: #ece8e0; color: var(--ink3); }
+.chip.cancelled { background: #F7ECEA; color: #9A4A3D; }
+.chip.wrongPatient { background: #F7ECEA; color: #9A4A3D; }

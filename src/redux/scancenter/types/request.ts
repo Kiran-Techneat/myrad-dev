@@ -51,3 +51,13 @@ export interface IReportUploadExtractRequest {
     scanItemId: string;
     files: File[];
 }
+
+export interface IScanRevokeRequest {
+    token: string;
+    scanItemId: string;
+}
+
+export interface IScanMessageRequest {
+    token: string;
+    message: string;
+}

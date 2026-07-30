@@ -5,7 +5,6 @@ import Loader from '@/components/common/Loader'
 import { Icon } from '@/components/common/Icon'
 import { fmtLong, initialsFromName } from '@/utils/format'
 import { formatUSPhoneNumber } from '@/utils/commonUtils'
-import { showAlert } from '@/components/common/showAlert'
 import ScanItemUploader from '../components/scanitemuploader/ScanItemUploader'
 import ParsingModal from '../components/ParsingModal'
 import MatchModal from '../components/MatchModal'
@@ -38,6 +37,8 @@ const ScanCenterHome = () => {
         resumeModalOpen,
         resumeAllPaused,
         startNewAllPaused,
+        revokeNotOurPatient,
+        sendPatientMessage,
     } = useUpload(id)
 
     useEffect(() => { ui.reset(); initValidation() }, [id])
@@ -56,6 +57,9 @@ const ScanCenterHome = () => {
 
     const patientName = d?.fullName ?? ''
     const mobile = d?.phoneNumber ? formatUSPhoneNumber(d.phoneNumber) : '—'
+    const isRevoked =
+        ['REVOKED', 'WRONG_PATIENT'].includes(d?.linkStatus ?? '') ||
+        ['REVOKED', 'WRONG_PATIENT'].includes(d?.tokenStatus ?? '')
 
     return (
         <>
@@ -111,7 +115,7 @@ const ScanCenterHome = () => {
                         <div className="centerbar2">
                             <div className="cb-nm">
                                 <span>{na(center.labCenterName)}</span>
-                                {d.patientMrnNumber && <span className="cb-req2">MRN {d.patientMrnNumber}</span>}
+                                {d.requestId && <span className="cb-req2">{d.requestId}</span>}
                             </div>
                             <div className="cb-contacts2b">
                                 <span className="cb-c"><Icon name="mapPin" sw={1.8} />{na(center.location)}</span>
@@ -141,7 +145,7 @@ const ScanCenterHome = () => {
                                 <button className="pt-actbtn danger" onClick={() => ui.patch({ modal: 'notOurPatient' })}>
                                     <Icon name="alert" sw={1.8} />Not our patient
                                 </button>
-                                <button className={`verify-btn2 ${ui.verified ? 'ok' : ''}`} onClick={() => ui.patch({ verified: !ui.verified })}>
+                                <button className={`verify-btn2 ${ui.verified ? 'ok' : ''}`} disabled={isRevoked} onClick={() => ui.patch({ verified: !ui.verified })}>
                                     <Icon name="checkCircle" sw={2} />
                                     {ui.verified ? 'Patient confirmed' : 'Confirm patient'}
                                 </button>
@@ -244,9 +248,9 @@ const ScanCenterHome = () => {
                             <button
                                 className="btn btn-primary"
                                 disabled={!ui.textMsgDraft.trim()}
-                                onClick={() => {
-                                    ui.patch({ modal: null })
-                                    showAlert({ message: `A text message was sent to ${patientName}.`, status: 'success', autoClose: 5000 })
+                                onClick={async () => {
+                                    const ok = await sendPatientMessage(ui.textMsgDraft)
+                                    if (ok) ui.patch({ modal: null, textMsgDraft: '' })
                                 }}
                             >
                                 Send text
@@ -270,7 +274,10 @@ const ScanCenterHome = () => {
                             <button
                                 className="btn btn-ghost"
                                 style={{ flex: 1, color: 'var(--rose)', borderColor: '#E4CECB' }}
-                                onClick={() => ui.patch({ flagged: true, modal: null })}
+                                onClick={async () => {
+                                    const ok = await revokeNotOurPatient()
+                                    if (ok) ui.patch({ flagged: true, modal: null })
+                                }}
                             >
                                 Confirm — not our patient
                             </button>

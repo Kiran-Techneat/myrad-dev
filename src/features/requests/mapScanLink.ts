@@ -12,6 +12,8 @@ export function mapLinkStatus(status?: string | null): AggregateStatus {
       return 'partial';
     case 'REVOKED':
       return 'cancelled';
+    case 'WRONG_PATIENT':
+      return 'wrongPatient';
     case 'PENDING':
     default:
       return 'pending';

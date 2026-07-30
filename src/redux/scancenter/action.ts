@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { IAPIErrorResponse } from "@/interface/base";
 import type { IReportUploadExtractResponse, IScanMultipartInitResponse, IScanReportUploadResponse, IScanTokenValidationResponse, IScanUploadCompleteResponse, IScanUploadGenerateResponse } from "./types/response";
-import type { IReportUploadExtractRequest, IScanMultipartAbortRequest, IScanMultipartCompleteRequest, IScanMultipartInitRequest, IScanReportUploadRequest, IScanTokenValidationRequest, IScanUploadCompleteRequest, IScanUploadGenerateRequest } from "./types/request";
+import type { IReportUploadExtractRequest, IScanMessageRequest, IScanMultipartAbortRequest, IScanMultipartCompleteRequest, IScanMultipartInitRequest, IScanReportUploadRequest, IScanRevokeRequest, IScanTokenValidationRequest, IScanUploadCompleteRequest, IScanUploadGenerateRequest } from "./types/request";
 import apiInstance from "@/utils/axios";
 
 interface IScanAddItemRequest {
@@ -10,6 +10,7 @@ interface IScanAddItemRequest {
 }
 
 const baseUrl = `${import.meta.env.VITE_FILE_API_URL || import.meta.env.VITE_BASE_URL || ""}/files-service/scan`;
+const usersBaseUrl = `${import.meta.env.VITE_FILE_API_URL || import.meta.env.VITE_BASE_URL || ""}/users-service/public/scan`;
 
 export const validateToken = createAsyncThunk<IScanTokenValidationResponse, IScanTokenValidationRequest, { rejectValue: IAPIErrorResponse }>("/upload/validate", async (payload, { rejectWithValue }) => {
     try {
@@ -85,6 +86,24 @@ export const reportuploadextract = createAsyncThunk<IReportUploadExtractResponse
                 headers: { "Content-Type": "multipart/form-data" },
             }
         );
+        return response?.data;
+    } catch (error: any | IAPIErrorResponse) {
+        return rejectWithValue(error.response?.data);
+    }
+});
+
+export const scanRevoke = createAsyncThunk<any, IScanRevokeRequest, { rejectValue: IAPIErrorResponse }>("/public/scan/revoke", async (payload, { rejectWithValue }) => {
+    try {
+        const response = await apiInstance.post(`${usersBaseUrl}/revoke`, payload);
+        return response?.data;
+    } catch (error: any | IAPIErrorResponse) {
+        return rejectWithValue(error.response?.data);
+    }
+});
+
+export const scanMessage = createAsyncThunk<any, IScanMessageRequest, { rejectValue: IAPIErrorResponse }>("/public/scan/message", async (payload, { rejectWithValue }) => {
+    try {
+        const response = await apiInstance.post(`${usersBaseUrl}/message`, payload);
         return response?.data;
     } catch (error: any | IAPIErrorResponse) {
         return rejectWithValue(error.response?.data);

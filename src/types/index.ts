@@ -12,7 +12,7 @@ export type StudyTag =
   | 'OTH';
 
 export type RequestItemStatus = 'ready' | 'pending' | 'cancelled';
-export type AggregateStatus = 'ready' | 'pending' | 'partial' | 'cancelled';
+export type AggregateStatus = 'ready' | 'pending' | 'partial' | 'cancelled' | 'wrongPatient';
 
 export interface Person {
   id: number | string;
