@@ -68,8 +68,8 @@ export function HomeScreen() {
     ? patientFileCounts?.myImages ?? 0
     : dashboardcount?.recordInfo?.myImages ?? 0;
   const myRequestCount = isFiltered
-    ? patientRequestCounts?.total ?? 0
-    : requestDashboard?.total ?? 0;
+    ? patientRequestCounts?.myRequest ?? 0
+    : requestDashboard?.myRequest ?? 0;
 
   const greetName = userProfile?.firstName ?? '';
 

@@ -238,7 +238,7 @@ export function useSelfUpload({ onDone }: UseSelfUploadArgs) {
             initSelfMultipartUpload({
               linkId,
               scanItemId,
-              totalSizeBytes: session.blob!.size,
+              totalSizeBytes: session.blob.size,
               partSizeBytes: partSize,
             }),
           ).unwrap();
@@ -253,7 +253,7 @@ export function useSelfUpload({ onDone }: UseSelfUploadArgs) {
         if (cancelledRef.current) return;
 
         pendingAbortRef.current = { s3Key: session.s3Key, uploadId: session.uploadId, fileId: session.fileId, linkId };
-        const blob = session.blob!;
+        const blob = session.blob;
         const parts = session.parts;
 
         try {

@@ -533,7 +533,7 @@ export const useUpload = (id: string | undefined) => {
             for (const { prefixedName, file } of bucket) zip.file(prefixedName, file);
             session.blob = await zip.generateAsync({ type: "blob", streamFiles: false, compression: "STORE" });
           }
-          const blob = session.blob!;
+          const blob = session.blob;
 
           if (cancelledRef.current[scanItemId]) return;
 

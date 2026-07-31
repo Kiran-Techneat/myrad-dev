@@ -1,1 +1,5 @@
-/*    /index.html   200
+# OHIF viewer sub-app (routerBasename /ohif) — client-routed paths fall back to its index
+/ohif/*   /ohif/index.html   200
+
+# Main SPA — every other unknown path serves the app shell
+/*        /index.html        200
