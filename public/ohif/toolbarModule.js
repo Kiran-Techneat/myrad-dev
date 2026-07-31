@@ -1,0 +1,1 @@
+import e from"react";import o from"./toolbar/WindowLevelPresetDropdown";export default function r({commandsManager:t,servicesManager:n}){return[{name:"wlPresetDropdown",defaultComponent:r=>e.createElement(o,{...r,servicesManager:n,commandsManager:t})}]}

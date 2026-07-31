@@ -1,0 +1,1 @@
+import{activateScrollMode as o}from"../tools/ScrollMode";export default function t({servicesManager:e}){let{toolGroupService:n}=e.services;return{definitions:{activateScrollMode:{commandFn:()=>{o(n)},options:{}}},defaultContext:"CORNERSTONE"}}

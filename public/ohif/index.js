@@ -1,0 +1,1 @@
+import o from"./init";import t from"./toolbarModule";import e from"./commands/index";let extension={id:"ohif-custom-module",preRegistration:o,getToolbarModule:t,getCommandsModule:e};export default extension;
